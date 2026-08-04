@@ -16,6 +16,8 @@ export default defineConfig({
         'favicon.png',
         'icon-192.png',
         'icon-512.png',
+        'og.jpg',
+        'og-icon.jpg',
         'ui/spirit-vein-ore.png',
         'ui/spirit-stone.png',
         'ui/weihai-splash.png',
