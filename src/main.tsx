@@ -4,6 +4,7 @@ import App from './App';
 import './styles.css';
 import { sound } from './game/audio';
 import { validateContent } from './game/content';
+import { bindInstallPromptCapture } from './game/installPrompt';
 import { gameStore } from './game/store';
 
 const contentErrors = validateContent();
@@ -48,6 +49,7 @@ sound.bindUnlock();
 sound.bindLifecycle();
 sound.preload();
 bindViewportLock();
+bindInstallPromptCapture();
 
 await gameStore.initialize();
 

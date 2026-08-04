@@ -480,7 +480,8 @@ button.player-bars.pack-hotspot .hud-label {
   color: #8a8170;
   font: 12px/1 -apple-system, "PingFang SC", sans-serif;
 }
-.install-hint .primary { margin-top: 14px; }
+.install-hint .primary,
+.install-hint .secondary { margin-top: 10px; }
 .install-hint ul { margin-bottom: 4px; }
 .inventory-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
 .inventory-columns > div { min-width: 0; padding: 10px; border: 1px solid #9e9684; border-radius: 12px; background: #fffaf1; }

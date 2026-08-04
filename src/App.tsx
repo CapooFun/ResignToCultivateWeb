@@ -5,6 +5,12 @@ import { sound } from './game/audio';
 import { enemyDisplayName, facilityUpgradeCost, ITEMS, MAP_TIERS, PASSIVES, POTIONS, qualityCssClass, RECIPES, SKILLS, TALENTS } from './game/content';
 import { escapeChanceFor, escapeCooldownMs, talentCost, unlockedPotionSlots } from './game/core';
 import { markInstallHintSeen, shouldOfferInstallHint } from './game/installHint';
+import {
+  bindInstallPromptCapture,
+  detectInstallPlatform,
+  promptInstallApp,
+  subscribeInstallPrompt
+} from './game/installPrompt';
 import { mergeSources, usedSlots } from './game/inventory';
 import { currentFloor } from './game/mapGenerator';
 import { exportState, importState } from './game/save';
@@ -135,16 +141,46 @@ function RewardPopup({ title, lines, onClose }: { title: string; lines: string[]
 /** 首次轮回重生后的「添加到主屏幕」建议。 */
 function InstallHintPopup({ onClose }: { onClose: () => void }) {
   const panelRef = useRef<HTMLElement>(null);
+  const [canOneTap, setCanOneTap] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const platform = detectInstallPlatform();
+
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       panelRef.current?.focus({ preventScroll: true });
     });
     return () => window.cancelAnimationFrame(frame);
   }, []);
+
+  useEffect(() => subscribeInstallPrompt(setCanOneTap), []);
+
   const dismiss = () => {
     markInstallHintSeen();
     onClose();
   };
+
+  const onInstall = async () => {
+    setBusy(true);
+    const outcome = await promptInstallApp();
+    setBusy(false);
+    if (outcome === 'accepted' || outcome === 'dismissed') {
+      markInstallHintSeen();
+      onClose();
+      return;
+    }
+    // 无原生提示时保持弹层，改看下方说明
+    setCanOneTap(false);
+  };
+
+  const tips =
+    platform === 'ios-safari'
+      ? ['Safari：点底部分享 →「添加到主屏幕」', '装好后从桌面图标进，可全屏少误触']
+      : platform === 'ios-chrome'
+        ? ['iPhone 上的 Chrome 不能一键安装到桌面', '请用 Safari 打开同一网址，再点分享 →「添加到主屏幕」']
+        : canOneTap
+          ? ['点击下方按钮，按系统提示安装', '安装后可从桌面/开始菜单一键打开']
+          : ['Chrome 菜单（⋮）里找「安装应用」或「添加到主屏幕」', '需用 https 正式站；局域网 http 地址通常不能一键装'];
+
   return (
     <div className="reward-popup-backdrop" role="presentation" onPointerDown={dismiss}>
       <section
@@ -159,11 +195,18 @@ function InstallHintPopup({ onClose }: { onClose: () => void }) {
         <p className="reward-popup-eyebrow">轮回之后</p>
         <h2>添加到主屏幕</h2>
         <ul>
-          <li>Safari：点底部分享 → 选择「添加到主屏幕」</li>
-          <li>全屏游玩，少误触浏览器顶底栏</li>
-          <li>下次从桌面图标进入更稳</li>
+          {tips.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
         </ul>
-        <button type="button" className="primary wide" onClick={dismiss}>知道了</button>
+        {canOneTap ? (
+          <button type="button" className="primary wide" disabled={busy} onClick={() => void onInstall()}>
+            {busy ? '唤起中…' : '一键添加到主屏幕'}
+          </button>
+        ) : null}
+        <button type="button" className={canOneTap ? 'secondary wide' : 'primary wide'} onClick={dismiss}>
+          {canOneTap ? '稍后' : '知道了'}
+        </button>
       </section>
     </div>
   );
