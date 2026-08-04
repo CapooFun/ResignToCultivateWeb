@@ -1,5 +1,5 @@
 import { CONTENT_VERSION } from './content';
-import { SAVE_VERSION } from './core';
+import { migrateGameState, SAVE_VERSION } from './core';
 import type { GameState, SaveEnvelope } from './types';
 
 const DB_NAME = 'resign-to-cultivate';
@@ -63,10 +63,19 @@ export function createEnvelope(state: GameState): SaveEnvelope {
 export function parseEnvelope(raw: unknown): SaveEnvelope {
   if (!raw || typeof raw !== 'object') throw new Error('存档根对象无效');
   const envelope = raw as Partial<SaveEnvelope>;
-  if (envelope.saveVersion !== SAVE_VERSION) throw new Error(`不支持的存档版本：${String(envelope.saveVersion)}`);
+  if (typeof envelope.saveVersion !== 'number') throw new Error(`不支持的存档版本：${String(envelope.saveVersion)}`);
+  if (envelope.saveVersion > SAVE_VERSION) throw new Error(`不支持的存档版本：${String(envelope.saveVersion)}`);
   if (!envelope.state || typeof envelope.state !== 'object') throw new Error('存档缺少游戏状态');
-  if (envelope.contentVersion !== CONTENT_VERSION) throw new Error(`内容版本不匹配：${String(envelope.contentVersion)}`);
-  return envelope as SaveEnvelope;
+  const state = envelope.saveVersion < SAVE_VERSION || envelope.contentVersion !== CONTENT_VERSION
+    ? migrateGameState(envelope.state)
+    : envelope.state as GameState;
+  return {
+    saveVersion: SAVE_VERSION,
+    contentVersion: CONTENT_VERSION,
+    buildVersion: envelope.buildVersion ?? state.meta.buildVersion,
+    savedAt: envelope.savedAt ?? Date.now(),
+    state
+  };
 }
 
 export async function saveState(state: GameState): Promise<void> {
@@ -99,4 +108,3 @@ export function importState(serialized: string): GameState {
 export async function clearSavedState(): Promise<void> {
   await clearValues();
 }
-

@@ -12,7 +12,16 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'prompt',
-      includeAssets: ['favicon.png', 'icon-192.png', 'icon-512.png'],
+        includeAssets: [
+        'favicon.png',
+        'icon-192.png',
+        'icon-512.png',
+        'ui/spirit-vein-ore.png',
+        'ui/spirit-stone.png',
+        'audio/bgm/*.m4a',
+        'audio/system_sfx/*',
+        'audio/combat_sfx/*'
+      ],
       manifest: {
         id: basePath,
         name: '辞职修仙传',
@@ -33,7 +42,7 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: `${basePath}index.html`,
-        globPatterns: ['**/*.{js,css,html,png,woff2}'],
+        globPatterns: ['**/*.{js,css,html,png,woff2,ogg,wav,m4a}'],
         cleanupOutdatedCaches: true
       }
     })
