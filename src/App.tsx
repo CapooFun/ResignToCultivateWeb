@@ -77,9 +77,11 @@ function Bar({ value, max, kind, label }: { value: number; max: number; kind: 'h
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   const panelRef = useRef<HTMLElement>(null);
   useEffect(() => {
-    panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    const panel = panelRef.current;
     const frame = window.requestAnimationFrame(() => {
-      panelRef.current?.focus({ preventScroll: true });
+      // 弹层为 fixed 贴底；再滚一次弹层内容到顶部，避免长列表停在中间
+      panel?.scrollTo({ top: 0 });
+      panel?.focus({ preventScroll: true });
     });
     return () => window.cancelAnimationFrame(frame);
   }, []);
@@ -159,7 +161,18 @@ function ClickableStacks({
   );
 }
 
-function EquipmentPanel({ state, dispatch, onClose }: { state: GameState; dispatch: (command: GameCommand) => void; onClose: () => void }) {
+function EquipmentPanel({
+  state,
+  dispatch,
+  onClose,
+  fieldMode = false
+}: {
+  state: GameState;
+  dispatch: (command: GameCommand) => void;
+  onClose: () => void;
+  /** 探索非战斗：只动用身上行囊，不访问仓库 */
+  fieldMode?: boolean;
+}) {
   const [tab, setTab] = useState<PackTab>('all');
   const [assignItemId, setAssignItemId] = useState<string | null>(null);
   const [focusSlot, setFocusSlot] = useState<EquipmentSlot | null>(null);
@@ -167,8 +180,13 @@ function EquipmentPanel({ state, dispatch, onClose }: { state: GameState; dispat
   const bagMaterials = state.inventory.bag.filter((stack) => ITEMS[stack.itemId]?.kind === 'material');
   const bagPotions = state.inventory.bag.filter((stack) => ITEMS[stack.itemId]?.kind === 'potion');
   const availableEquipment = useMemo(
-    () => mergeSources(state.inventory.bag, state.inventory.warehouse).filter((stack) => ITEMS[stack.itemId]?.kind === 'equipment'),
-    [state.inventory]
+    () => {
+      const source = fieldMode
+        ? state.inventory.bag
+        : mergeSources(state.inventory.bag, state.inventory.warehouse);
+      return source.filter((stack) => ITEMS[stack.itemId]?.kind === 'equipment');
+    },
+    [state.inventory, fieldMode]
   );
   const gearForFocus = focusSlot
     ? availableEquipment.filter((stack) => ITEMS[stack.itemId]?.equipmentSlot === focusSlot)
@@ -196,7 +214,10 @@ function EquipmentPanel({ state, dispatch, onClose }: { state: GameState; dispat
   };
 
   return (
-    <Modal title="装配与行囊" onClose={onClose}>
+    <Modal title={fieldMode ? '行囊与装配' : '装配与行囊'} onClose={onClose}>
+      {fieldMode && (
+        <p className="modal-intro">探索中可换装、换秘术、补丹药；仅身上行囊可用，洞府仓库需回府再开。</p>
+      )}
       <div className="pack-tabs" role="tablist" aria-label="行囊分类">
         {tabs.map((entry) => (
           <button
@@ -227,7 +248,7 @@ function EquipmentPanel({ state, dispatch, onClose }: { state: GameState; dispat
       {tab === 'gear' && (
         <section className="pack-section">
           <div className="section-bar">法宝六槽</div>
-          <p className="modal-intro">点空槽或已装备槽，下方列出可替换的法宝。</p>
+          <p className="modal-intro">{fieldMode ? '点空槽或已装备槽，下方列出行囊中可替换的法宝。' : '点空槽或已装备槽，下方列出可替换的法宝。'}</p>
           <div className="equipment-grid six">
             {EQUIP_SLOTS.map((slot) => {
               const itemId = state.player.equipment[slot];
@@ -249,7 +270,7 @@ function EquipmentPanel({ state, dispatch, onClose }: { state: GameState; dispat
           <div className="section-bar">{focusSlot ? `${SLOT_NAME[focusSlot]}可装` : '全部可装法宝'} · {gearForFocus.length}</div>
           <div className="recipe-list compact">
             {gearForFocus.length === 0
-              ? <p className="empty-note">暂无对应法宝，可去炼器或秘境寻找。</p>
+              ? <p className="empty-note">{fieldMode ? '行囊中暂无对应法宝。' : '暂无对应法宝，可去炼器或秘境寻找。'}</p>
               : gearForFocus.map((stack) => {
                 const item = ITEMS[stack.itemId];
                 return (
@@ -553,7 +574,15 @@ function SelectView({ state, dispatch }: { state: GameState; dispatch: (command:
   );
 }
 
-function CombatHud({ state, dispatch }: { state: GameState; dispatch: (command: GameCommand) => void }) {
+function CombatHud({
+  state,
+  dispatch,
+  onOpenPack
+}: {
+  state: GameState;
+  dispatch: (command: GameCommand) => void;
+  onOpenPack?: () => void;
+}) {
   const combat = state.combat;
   const clock = combat?.clockMs ?? 0;
   const unlocked = unlockedPotionSlots(state);
@@ -564,6 +593,14 @@ function CombatHud({ state, dispatch }: { state: GameState; dispatch: (command: 
   const mp = combat?.player.mp ?? state.player.mp;
   const maxHp = combat?.player.maxHp ?? state.player.maxHp;
   const maxMp = combat?.player.maxMp ?? state.player.maxMp;
+  const canOpenPack = Boolean(onOpenPack) && !combat;
+  const bars = (
+    <>
+      <span className="hud-label">{canOpenPack ? '血气 / 灵气 · 点开行囊' : '血气 / 灵气'}</span>
+      <Bar value={hp} max={maxHp} kind="hp" label="生命" />
+      <Bar value={mp} max={maxMp} kind="mp" label="灵气" />
+    </>
+  );
   return (
     <section className={`explore-hud skills-${Math.min(6, Math.max(1, skillCount))}`}>
       <div className={`skill-cds count-${skillCount}`}>
@@ -588,11 +625,13 @@ function CombatHud({ state, dispatch }: { state: GameState; dispatch: (command: 
           );
         })}
       </div>
-      <div className="player-bars">
-        <span className="hud-label">血气 / 灵气</span>
-        <Bar value={hp} max={maxHp} kind="hp" label="生命" />
-        <Bar value={mp} max={maxMp} kind="mp" label="灵气" />
-      </div>
+      {canOpenPack ? (
+        <button type="button" className="player-bars pack-hotspot" onClick={onOpenPack} aria-label="打开行囊与装配">
+          {bars}
+        </button>
+      ) : (
+        <div className="player-bars">{bars}</div>
+      )}
       <div className="potion-slots">
         <span className="hud-label">丹药</span>
         {Array.from({ length: unlocked }, (_, slot) => {
@@ -632,6 +671,12 @@ function ExploreView({ state, dispatch }: { state: GameState; dispatch: (command
   const floor = currentFloor(run);
   const pending = floor.entities.find((entity) => entity.id === run.pendingInteractionId);
   const enemyName = state.combat ? enemyDisplayName(state.combat.enemyId, state.combat.enemyRank) : null;
+  const [packOpen, setPackOpen] = useState(false);
+
+  useEffect(() => {
+    if (state.combat) setPackOpen(false);
+  }, [state.combat]);
+
   return (
     <main className="screen explore-screen">
       <header className="explore-header"><span>寿元 <b>{state.player.lifespan}/{state.player.maxLifespan}</b></span><strong>{MAP_TIERS[run.sizeTier].name} · {run.floor}/{run.maxFloors}层</strong><span>步数 <b>{run.totalSteps}</b></span></header>
@@ -641,7 +686,15 @@ function ExploreView({ state, dispatch }: { state: GameState; dispatch: (command
       </Suspense>
       <div className="map-legend"><span>点相邻格或滑动一步</span><span>种子 {run.seed}</span></div>
       {pending && <div className="interaction-card"><b>{pending.kind === 'return' ? '回府传送阵' : '传送门'}</b><button onClick={() => dispatch({ type: pending.kind === 'return' ? 'RETURN_CAVE' : 'ADVANCE_FLOOR' })}>{pending.kind === 'return' ? '结束本趟并回府' : '进入下一层'}</button></div>}
-      <CombatHud state={state} dispatch={dispatch} />
+      <CombatHud state={state} dispatch={dispatch} onOpenPack={() => setPackOpen(true)} />
+      {packOpen && !state.combat && (
+        <EquipmentPanel
+          state={state}
+          dispatch={dispatch}
+          onClose={() => setPackOpen(false)}
+          fieldMode
+        />
+      )}
     </main>
   );
 }

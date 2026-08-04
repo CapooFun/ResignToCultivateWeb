@@ -393,4 +393,33 @@ describe('存档迁移', () => {
     expect(state.player.equipment.melee).toBe('melee_2');
     expect(state.meta.message).toMatch(/仓库已满/);
   });
+
+  it('探索非战斗可换装换术补丹，旧装备回行囊；战斗中不可', () => {
+    let state = startRun();
+    state.inventory.bag = [
+      { itemId: 'melee_2', count: 1 },
+      { itemId: 'pill_heal_1', count: 2 }
+    ];
+    state.player.equipment.melee = 'melee_1';
+    state.player.learnedSkills = ['firebolt', 'sword_art', 'wind_slash'];
+    state.player.equippedSkills = ['firebolt', 'sword_art'];
+
+    state = dispatchGameCommand(state, { type: 'EQUIP', itemId: 'melee_2' }).state;
+    expect(state.player.equipment.melee).toBe('melee_2');
+    expect(itemCount(state.inventory.bag, 'melee_1')).toBe(1);
+    expect(itemCount(state.inventory.bag, 'melee_2')).toBe(0);
+
+    state = dispatchGameCommand(state, { type: 'TOGGLE_SKILL', skillId: 'wind_slash' }).state;
+    expect(state.player.equippedSkills).toContain('wind_slash');
+
+    state = dispatchGameCommand(state, { type: 'ASSIGN_POTION', itemId: 'pill_heal_1', slot: 0 }).state;
+    expect(state.player.potionBelt[0]?.itemId).toBe('pill_heal_1');
+    expect(itemCount(state.inventory.bag, 'pill_heal_1')).toBe(0);
+
+    state = enterFirstEnemy(state);
+    const meleeBefore = state.player.equipment.melee;
+    state.inventory.bag.push({ itemId: 'melee_3', count: 1 });
+    state = dispatchGameCommand(state, { type: 'EQUIP', itemId: 'melee_3' }).state;
+    expect(state.player.equipment.melee).toBe(meleeBefore);
+  });
 });

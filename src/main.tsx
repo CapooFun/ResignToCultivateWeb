@@ -25,15 +25,20 @@ function bindViewportLock(): void {
   );
 
   let lastTouchEnd = 0;
-  // 仅拦截「空白处」的双击放大；按钮狂点不拦截，否则采矿连点会失效
+  // iOS 对 button 也要拦双击放大；连点采矿时补一次 click，避免 preventDefault 吃掉第二次点击
   document.addEventListener(
     'touchend',
     (event) => {
-      const target = event.target as HTMLElement | null;
-      if (target?.closest('button, a, input, textarea, .stack-chip, .vein-core, .mine-stored-collect')) return;
       const now = Date.now();
-      if (now - lastTouchEnd <= 280) event.preventDefault();
+      const isDouble = now - lastTouchEnd <= 320;
       lastTouchEnd = now;
+      if (!isDouble) return;
+      event.preventDefault();
+      const target = event.target as HTMLElement | null;
+      const interactive = target?.closest(
+        'button:not(:disabled), a[href], .stack-chip, .vein-core:not(:disabled), .mine-stored-collect:not(:disabled)'
+      ) as HTMLElement | null;
+      if (interactive) interactive.click();
     },
     { passive: false }
   );

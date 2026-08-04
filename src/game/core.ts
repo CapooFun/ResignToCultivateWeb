@@ -359,8 +359,13 @@ export function grantSkill(state: GameState, skillId: string, options?: { silent
   return true;
 }
 
+function canManageLoadout(state: GameState): boolean {
+  if (state.scene === 'cave') return true;
+  return state.scene === 'explore' && !state.combat;
+}
+
 function toggleSkill(state: GameState, skillId: string): void {
-  if (state.scene !== 'cave') return;
+  if (!canManageLoadout(state)) return;
   if (!state.player.learnedSkills.includes(skillId) || !SKILLS[skillId]) {
     message(state, '尚未领悟该秘术。');
     return;
@@ -1112,33 +1117,54 @@ function upgradeFacility(state: GameState, facility: 'mine' | 'alchemy' | 'forge
 }
 
 function equipItem(state: GameState, itemId: string): void {
-  if (state.scene !== 'cave') return;
+  if (!canManageLoadout(state)) return;
   const item = ITEMS[itemId];
   if (!item?.equipmentSlot) return;
   const inBag = itemCount(state.inventory.bag, itemId);
-  const inWarehouse = itemCount(state.inventory.warehouse, itemId);
+  const inWarehouse = state.scene === 'cave' ? itemCount(state.inventory.warehouse, itemId) : 0;
   if (inBag + inWarehouse <= 0) return;
   const slot: EquipmentSlot = item.equipmentSlot;
   const previous = state.player.equipment[slot];
-  if (previous) {
-    const canStore = addItem(state.inventory.warehouse, state.inventory.warehouseCapacity, previous, 1);
-    if (canStore.added !== 1) {
-      message(state, '仓库已满，无法卸下旧装备，换装取消。');
+  const fieldMode = state.scene === 'explore';
+
+  if (fieldMode) {
+    if (inBag <= 0) {
+      message(state, '野外只能装备身上行囊中的法宝。');
       return;
     }
+    if (previous) {
+      const canStore = addItem(state.inventory.bag, state.inventory.capacity, previous, 1);
+      if (canStore.added !== 1) {
+        message(state, '行囊已满，无法卸下旧装备，换装取消。');
+        return;
+      }
+    }
+    state.inventory.bag = removeItem(state.inventory.bag, itemId, 1).stacks;
+    if (previous) {
+      state.inventory.bag = addItem(state.inventory.bag, state.inventory.capacity, previous, 1).stacks;
+    }
+  } else {
+    if (previous) {
+      const canStore = addItem(state.inventory.warehouse, state.inventory.warehouseCapacity, previous, 1);
+      if (canStore.added !== 1) {
+        message(state, '仓库已满，无法卸下旧装备，换装取消。');
+        return;
+      }
+    }
+    if (inBag > 0) state.inventory.bag = removeItem(state.inventory.bag, itemId, 1).stacks;
+    else state.inventory.warehouse = removeItem(state.inventory.warehouse, itemId, 1).stacks;
+    if (previous) {
+      state.inventory.warehouse = addItem(state.inventory.warehouse, state.inventory.warehouseCapacity, previous, 1).stacks;
+    }
   }
-  if (inBag > 0) state.inventory.bag = removeItem(state.inventory.bag, itemId, 1).stacks;
-  else state.inventory.warehouse = removeItem(state.inventory.warehouse, itemId, 1).stacks;
-  if (previous) {
-    state.inventory.warehouse = addItem(state.inventory.warehouse, state.inventory.warehouseCapacity, previous, 1).stacks;
-  }
+
   state.player.equipment[slot] = itemId;
   recalculatePlayer(state);
   message(state, `已装备${item.name}。`);
 }
 
 function assignPotion(state: GameState, itemId: string, slot: number): void {
-  if (state.scene !== 'cave') return;
+  if (!canManageLoadout(state)) return;
   if (!POTIONS[itemId] || ITEMS[itemId]?.kind !== 'potion') return;
   if (slot < 0 || slot >= unlockedPotionSlots(state)) {
     message(state, '该丹药槽尚未解锁，请先装备更高阶腰带。');
@@ -1164,7 +1190,7 @@ function assignPotion(state: GameState, itemId: string, slot: number): void {
 }
 
 function clearPotionSlot(state: GameState, slot: number): void {
-  if (state.scene !== 'cave') return;
+  if (!canManageLoadout(state)) return;
   const belt = state.player.potionBelt[slot];
   if (!belt) return;
   const added = addItem(state.inventory.bag, state.inventory.capacity, belt.itemId, belt.count);

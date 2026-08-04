@@ -59,7 +59,7 @@ dispatchGameCommand → core.ts（纯规则）
 
 - `learnedSkills` / `equippedSkills`（≤ `MAX_EQUIPPED_SKILLS = 6`）
 - `passives: Record<id, stacks>`
-- `equipment` 六槽：melee / ranged / armor / ring / shoes / belt
+- `equipment` 六槽：melee / ranged / armor / ring / belt / shoes（UI 顺序同此）
 - `potionBelt`（与背包分离，战斗只扣腰带）
 
 **洞府 `CaveState`（采矿）**

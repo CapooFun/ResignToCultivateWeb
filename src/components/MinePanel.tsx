@@ -69,9 +69,8 @@ export function MinePanel({
     return () => window.clearInterval(timer);
   }, []);
 
-  // 采矿面板打开时锁死整页拖拽（含底层洞府页）
+  // 采矿打开：锁洞府页滚动；弹层内允许纵向滚，矿区禁横向拖页
   useEffect(() => {
-    const scrollY = window.scrollY;
     const touchStart = { x: 0, y: 0 };
 
     const onTouchStart = (event: TouchEvent) => {
@@ -81,7 +80,7 @@ export function MinePanel({
       touchStart.y = touch.clientY;
     };
 
-    const blockAllMove = (event: TouchEvent) => {
+    const onTouchMove = (event: TouchEvent) => {
       if (event.touches.length > 1) {
         event.preventDefault();
         return;
@@ -91,63 +90,40 @@ export function MinePanel({
         event.preventDefault();
         return;
       }
+      // 矿区点按：禁止拖页
       if (target.closest('.mine-chamber, .vein-core')) {
         event.preventDefault();
         return;
       }
-
+      const modal = target.closest('.mine-modal');
+      if (!modal) {
+        // 点在遮罩上：禁止带动底层洞府
+        event.preventDefault();
+        return;
+      }
       const touch = event.touches[0];
       if (touch) {
         const dx = Math.abs(touch.clientX - touchStart.x);
         const dy = Math.abs(touch.clientY - touchStart.y);
-        // 任何横向拖动一律禁止，防止整页被拽偏
-        if (dx > dy) {
+        if (dx > dy && dx > 6) {
           event.preventDefault();
           return;
         }
       }
-
-      const modal = target.closest('.mine-modal');
-      if (!modal) {
-        event.preventDefault();
-        return;
-      }
-      // 模态未溢出时也禁止，避免橡皮筋把壳层带走
+      // 弹层本身可滚时放行；未溢出则禁橡皮筋
       if (modal.scrollHeight <= modal.clientHeight + 1) {
         event.preventDefault();
       }
     };
 
-    const blockGesture = (event: Event) => event.preventDefault();
-    const lockScroll = () => {
-      window.scrollTo(0, 0);
-      document.documentElement.scrollLeft = 0;
-      document.body.scrollLeft = 0;
-      const shell = document.querySelector('.app-shell') as HTMLElement | null;
-      if (shell) {
-        shell.scrollLeft = 0;
-        shell.scrollTop = 0;
-      }
-    };
-
-    document.addEventListener('touchstart', onTouchStart, { passive: true });
-    document.addEventListener('touchmove', blockAllMove, { passive: false });
-    document.addEventListener('gesturestart', blockGesture, { passive: false } as AddEventListenerOptions);
-    document.addEventListener('gesturechange', blockGesture, { passive: false } as AddEventListenerOptions);
-    document.addEventListener('scroll', lockScroll, { passive: false, capture: true });
     document.body.classList.add('mine-lock');
-    document.body.style.top = `-${scrollY}px`;
-    lockScroll();
+    document.addEventListener('touchstart', onTouchStart, { passive: true });
+    document.addEventListener('touchmove', onTouchMove, { passive: false });
 
     return () => {
-      document.removeEventListener('touchstart', onTouchStart);
-      document.removeEventListener('touchmove', blockAllMove);
-      document.removeEventListener('gesturestart', blockGesture);
-      document.removeEventListener('gesturechange', blockGesture);
-      document.removeEventListener('scroll', lockScroll, true);
       document.body.classList.remove('mine-lock');
-      document.body.style.top = '';
-      window.scrollTo(0, scrollY);
+      document.removeEventListener('touchstart', onTouchStart);
+      document.removeEventListener('touchmove', onTouchMove);
     };
   }, []);
 
@@ -251,7 +227,7 @@ export function MinePanel({
             <span className="vein-ring" aria-hidden="true" />
             <span className="vein-ring delayed" aria-hidden="true" />
             <span className="vein-ore" aria-hidden="true">
-              <img src={asset('ui/spirit-vein-ore.png')} alt="" draggable={false} />
+              <img className="spirit-stone-icon vein-stone" src={asset('ui/spirit-stone.png')} alt="" draggable={false} />
             </span>
             <strong>{breathReady ? '叩击灵脉' : '灵息回复中'}</strong>
             <small>Lv.{state.cave.mineLevel} · 共鸣 {combo > 0 ? `×${combo}` : '—'}</small>

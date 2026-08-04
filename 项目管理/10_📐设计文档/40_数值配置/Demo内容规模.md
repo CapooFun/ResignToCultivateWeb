@@ -17,7 +17,7 @@
 | 敌人 | 18 | 6 难度层各 3（`ENEMIES_BY_LAYER`） |
 | 轮回天赋 | 12 | 每次死亡 `offeredTalents` 抽 3 个供强化 |
 | 灵材 | 12 | 与炼丹/炼器配方对应 |
-| 法宝 | 每槽 6 | melee / ranged / armor / ring / shoes / belt |
+| 法宝 | 每槽 6 | melee / ranged / armor / ring / belt / shoes（UI：戒→腰→鞋） |
 | 丹药 | 每类 6 | 血 / 灵 / 遁；可复合 healHp / restoreMp / escapeBonus |
 | 品质 | 6 档 | 凡品 → 灵器 → 灵宝 → 玄天灵宝 → 通天灵宝 → ？？？ |
 
