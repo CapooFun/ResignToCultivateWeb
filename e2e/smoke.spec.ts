@@ -44,3 +44,35 @@ test('采矿与炼丹弹层 fixed 贴底可开关', async ({ page }) => {
   expect(box!.y).toBeLessThan(700);
 });
 
+test('探索底栏贴底且可点血蓝条开行囊', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: '出发寻求机缘' }).click();
+  await page.getByRole('button', { name: /青石谷/ }).click();
+  await expect(page.locator('.explore-hud')).toBeVisible();
+
+  const layout = await page.evaluate(() => {
+    const screen = document.querySelector('.explore-screen') as HTMLElement;
+    const hud = document.querySelector('.explore-hud') as HTMLElement;
+    const header = document.querySelector('.explore-header') as HTMLElement;
+    const shell = document.querySelector('.app-shell') as HTMLElement;
+    const screenBox = screen.getBoundingClientRect();
+    const hudBox = hud.getBoundingClientRect();
+    const headerBox = header.getBoundingClientRect();
+    const shellBox = shell.getBoundingClientRect();
+    return {
+      hudBottomGap: Math.abs(screenBox.bottom - hudBox.bottom),
+      headerInsideShell: headerBox.top >= shellBox.top - 1,
+      headerVisibleHeight: headerBox.height,
+      mapBelowHud: screenBox.bottom - hudBox.bottom < 1
+    };
+  });
+  expect(layout.hudBottomGap).toBeLessThanOrEqual(2);
+  expect(layout.headerInsideShell).toBe(true);
+  expect(layout.headerVisibleHeight).toBeGreaterThanOrEqual(40);
+  expect(layout.mapBelowHud).toBe(true);
+
+  await page.getByRole('button', { name: '打开行囊与装配' }).click();
+  await expect(page.getByRole('dialog', { name: '行囊与装配' })).toBeVisible();
+  await page.getByRole('dialog', { name: '行囊与装配' }).getByRole('button', { name: '关闭' }).click();
+});
+

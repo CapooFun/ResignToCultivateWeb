@@ -4,6 +4,7 @@ import { MinePanel } from './components/MinePanel';
 import { sound } from './game/audio';
 import { enemyDisplayName, facilityUpgradeCost, ITEMS, MAP_TIERS, PASSIVES, POTIONS, qualityCssClass, RECIPES, SKILLS, TALENTS } from './game/content';
 import { escapeChanceFor, escapeCooldownMs, talentCost, unlockedPotionSlots } from './game/core';
+import { markInstallHintSeen, shouldOfferInstallHint } from './game/installHint';
 import { mergeSources, usedSlots } from './game/inventory';
 import { currentFloor } from './game/mapGenerator';
 import { exportState, importState } from './game/save';
@@ -126,6 +127,43 @@ function RewardPopup({ title, lines, onClose }: { title: string; lines: string[]
           ))}
         </ul>
         <p className="reward-popup-hint">点击任意处继续</p>
+      </section>
+    </div>
+  );
+}
+
+/** 首次轮回重生后的「添加到主屏幕」建议。 */
+function InstallHintPopup({ onClose }: { onClose: () => void }) {
+  const panelRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      panelRef.current?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+  const dismiss = () => {
+    markInstallHintSeen();
+    onClose();
+  };
+  return (
+    <div className="reward-popup-backdrop" role="presentation" onPointerDown={dismiss}>
+      <section
+        className="reward-popup install-hint"
+        ref={panelRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label="添加到主屏幕"
+        onPointerDown={(event) => event.stopPropagation()}
+      >
+        <p className="reward-popup-eyebrow">轮回之后</p>
+        <h2>添加到主屏幕</h2>
+        <ul>
+          <li>Safari：点底部分享 → 选择「添加到主屏幕」</li>
+          <li>全屏游玩，少误触浏览器顶底栏</li>
+          <li>下次从桌面图标进入更稳</li>
+        </ul>
+        <button type="button" className="primary wide" onClick={dismiss}>知道了</button>
       </section>
     </div>
   );
@@ -773,6 +811,7 @@ export default function App() {
   const state = useGameState();
   const dispatch = useCallback((command: GameCommand) => gameStore.dispatch(command), []);
   const [landscapeBlocked, setLandscapeBlocked] = useState(() => window.matchMedia('(orientation: landscape) and (pointer: coarse)').matches);
+  const [installHintOpen, setInstallHintOpen] = useState(false);
   const { needRefresh: [needRefresh], updateServiceWorker } = useRegisterSW();
   const lastActionIdRef = useRef(0);
   const lastOutcomeRef = useRef<string | null>(null);
@@ -809,11 +848,17 @@ export default function App() {
   }, [state.scene, Boolean(state.combat)]);
 
   useEffect(() => {
-    if (lastSceneRef.current === 'select' && state.scene === 'explore') {
+    const previous = lastSceneRef.current;
+    if (previous === 'select' && state.scene === 'explore') {
       sound.playSfx('cardSlide', 0.7);
     }
+    // 第一次死亡 → 轮回点 → 转世回洞府后，提示添加到主屏幕
+    if (previous === 'reincarnation' && state.scene === 'cave' && shouldOfferInstallHint(state.reincarnation.totalDeaths)) {
+      setInstallHintOpen(true);
+      sound.playSfx('ding', 0.75);
+    }
     lastSceneRef.current = state.scene;
-  }, [state.scene]);
+  }, [state.scene, state.reincarnation.totalDeaths]);
 
   useEffect(() => {
     const action = state.combat?.lastAction;
@@ -871,6 +916,9 @@ export default function App() {
           lines={state.popup.lines}
           onClose={() => dispatch({ type: 'DISMISS_POPUP' })}
         />
+      )}
+      {installHintOpen && (
+        <InstallHintPopup onClose={() => setInstallHintOpen(false)} />
       )}
       {landscapeBlocked && <div className="orientation-lock"><b>请将手机转回竖屏</b><span>游戏已暂停，返回竖屏后继续。</span></div>}
       {needRefresh && <div className="update-banner"><span>发现新版本，可立即刷新。</span><button onClick={() => void updateServiceWorker(true)}>更新</button></div>}

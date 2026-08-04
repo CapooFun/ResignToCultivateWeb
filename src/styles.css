@@ -170,22 +170,33 @@ button:disabled { opacity: .42; cursor: default; }
 .tier-list small { color: #72766d; font-family: -apple-system, "PingFang SC", sans-serif; font-size: 11px; }
 .tier-list em { color: #88433b; font-style: normal; font-weight: 700; font-size: 12px; }
 
-.explore-screen { display: grid; grid-template-rows: 48px minmax(0, 1fr) 22px; height: 100%; padding: 0 0 108px; overflow: hidden; background: #17201c; color: #f9f2e4; }
-.explore-header { height: 48px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 12px; font-family: -apple-system, "PingFang SC", sans-serif; font-size: 11px; background: #18261f; border-bottom: 1px solid #b89b5555; }
+.explore-screen { display: grid; grid-template-rows: auto minmax(0, 1fr) 22px; height: 100%; padding: 0 0 108px; overflow: hidden; background: #17201c; color: #f9f2e4; }
+.explore-header {
+  min-height: 48px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 10px 12px;
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  font-size: 11px;
+  line-height: 1.35;
+  background: #18261f;
+  border-bottom: 1px solid #b89b5555;
+}
 .explore-header span:last-child { text-align: right; }
 .explore-header strong { font-family: "Songti SC", serif; font-size: 14px; }
 .map-view { width: 100%; height: 100%; min-height: 0; display: grid; place-items: stretch; background: #17201c; touch-action: none; padding: 0; }
 .map-loading { height: 100%; min-height: 0; display: grid; place-items: center; color: #d7c7a0; background: #17201c; }
 .map-view canvas { width: 100% !important; height: 100% !important; max-width: none; max-height: none; }
-.map-legend { height: 28px; display: flex; justify-content: space-between; padding: 6px 12px; color: #aeb8af; background: #101712; font: 10px/1.5 -apple-system, sans-serif; }
-.combat-banner { position: absolute; top: calc(var(--safe-top) + 53px); left: 50%; z-index: 10; transform: translateX(-50%); min-width: 220px; padding: 7px 12px; border-radius: 14px; text-align: center; background: #6b2925eb; box-shadow: 0 5px 18px #0006; }
+.map-legend { height: 22px; display: flex; justify-content: space-between; align-items: center; padding: 0 12px; color: #aeb8af; background: #101712; font: 10px/1.5 -apple-system, sans-serif; }
+.combat-banner { position: absolute; top: 58px; left: 50%; z-index: 10; transform: translateX(-50%); min-width: 220px; padding: 7px 12px; border-radius: 14px; text-align: center; background: #6b2925eb; box-shadow: 0 5px 18px #0006; }
 .combat-banner span, .combat-banner b { display: block; }
 .combat-banner span { font: 10px/1.2 -apple-system, sans-serif; opacity: .75; }
 .combat-banner b { margin-top: 2px; font-size: 13px; }
-.interaction-card { position: absolute; left: 12px; right: 12px; bottom: calc(var(--safe-bottom) + 118px); z-index: 12; display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 12px; color: var(--ink); background: #f8f0dcf2; border: 1px solid #d0af65; border-radius: 12px; box-shadow: 0 6px 18px #0004; }
+.interaction-card { position: absolute; left: 12px; right: 12px; bottom: calc(108px + 10px); z-index: 12; display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 12px; color: var(--ink); background: #f8f0dcf2; border: 1px solid #d0af65; border-radius: 12px; box-shadow: 0 6px 18px #0004; }
 .interaction-card button { padding: 9px 11px; color: white; background: var(--pine); border-radius: 8px; font-size: 12px; }
 
-.explore-hud { position: absolute; left: 0; right: 0; bottom: calc(var(--safe-bottom) + 42px); height: 108px; z-index: 9; display: grid; grid-template-columns: 1.05fr 1.15fr 1fr; color: var(--ink); background: #f0e9dbf5; border-top: 1px solid #867c68; }
+.explore-hud { position: absolute; left: 0; right: 0; bottom: 0; height: 108px; z-index: 9; display: grid; grid-template-columns: 1.05fr 1.15fr 1fr; color: var(--ink); background: #f0e9dbf5; border-top: 1px solid #867c68; }
 .explore-hud > div,
 .explore-hud > button.player-bars {
   min-width: 0;
@@ -347,9 +358,10 @@ button:disabled { opacity: .42; cursor: default; }
 .passive-list b, .passive-list span { display: block; }
 .passive-list span { margin-top: 4px; color: #6b7268; font-size: 12px; }
 
-.player-bars { display: flex; flex-direction: column; justify-content: center; gap: 7px; }
+.player-bars { display: flex; flex-direction: column; justify-content: flex-start; gap: 7px; }
 button.player-bars.pack-hotspot {
   width: 100%;
+  height: 100%;
   margin: 0;
   padding: 6px 6px 5px;
   border: 0;
@@ -468,6 +480,8 @@ button.player-bars.pack-hotspot .hud-label {
   color: #8a8170;
   font: 12px/1 -apple-system, "PingFang SC", sans-serif;
 }
+.install-hint .primary { margin-top: 14px; }
+.install-hint ul { margin-bottom: 4px; }
 .inventory-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
 .inventory-columns > div { min-width: 0; padding: 10px; border: 1px solid #9e9684; border-radius: 12px; background: #fffaf1; }
 .inventory-columns h3 { margin-top: 0; }
@@ -904,8 +918,8 @@ button.player-bars.pack-hotspot .hud-label {
 .tier-l .tier-mark { background: linear-gradient(145deg, #8a5943, #563329); }
 .tier-list em { padding: 5px 7px; border-radius: 999px; color: #873e37; background: #f2ddd0; }
 
-.explore-screen { display: grid; grid-template-rows: 50px minmax(0, 1fr) 24px; padding: 0 0 108px; background: radial-gradient(circle at 50% 30%, #2a3931, #101713 76%); }
-.explore-header { height: 50px; background: linear-gradient(180deg, #203229, #14231c); border-bottom-color: #c7a95e6b; box-shadow: 0 5px 20px #0005; }
+.explore-screen { display: grid; grid-template-rows: auto minmax(0, 1fr) 24px; padding: 0 0 108px; background: radial-gradient(circle at 50% 30%, #2a3931, #101713 76%); }
+.explore-header { min-height: 50px; background: linear-gradient(180deg, #203229, #14231c); border-bottom-color: #c7a95e6b; box-shadow: 0 5px 20px #0005; }
 .map-view { height: 100%; min-height: 0; padding: 0; background: radial-gradient(circle, #2b3a32, #121a16 75%); }
 .map-view canvas { border: 0; border-radius: 0; box-shadow: none; }
 .map-legend { color: #96a49b; background: #0c120f; border-top: 1px solid #c4a65d22; }
