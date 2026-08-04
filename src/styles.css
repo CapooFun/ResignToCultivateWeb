@@ -186,7 +186,12 @@ button:disabled { opacity: .42; cursor: default; }
 .interaction-card button { padding: 9px 11px; color: white; background: var(--pine); border-radius: 8px; font-size: 12px; }
 
 .explore-hud { position: absolute; left: 0; right: 0; bottom: calc(var(--safe-bottom) + 42px); height: 108px; z-index: 9; display: grid; grid-template-columns: 1.05fr 1.15fr 1fr; color: var(--ink); background: #f0e9dbf5; border-top: 1px solid #867c68; }
-.explore-hud > div { min-width: 0; padding: 6px 6px 5px; border-right: 1px solid #968d7c66; }
+.explore-hud > div,
+.explore-hud > button.player-bars {
+  min-width: 0;
+  padding: 6px 6px 5px;
+  border-right: 1px solid #968d7c66;
+}
 .explore-hud > div:last-child { border: 0; }
 .hud-label { display: block; margin-bottom: 4px; color: #727168; text-align: center; font: 9px/1 -apple-system, sans-serif; letter-spacing: .08em; }
 .skill-cds, .potion-slots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; align-content: start; justify-items: center; }
@@ -840,8 +845,7 @@ button.player-bars.pack-hotspot .hud-label {
 .app-shell { border: 1px solid #d8caa91f; }
 .screen { position: relative; isolation: isolate; animation: screen-enter .3s ease-out; }
 .cave-screen > *:not(.cave-atmosphere):not(.modal-backdrop),
-.select-screen > *:not(.realm-atmosphere):not(.modal-backdrop),
-.explore-screen > *:not(.modal-backdrop) {
+.select-screen > *:not(.realm-atmosphere):not(.modal-backdrop) {
   position: relative;
   z-index: 1;
 }
@@ -913,7 +917,8 @@ button.player-bars.pack-hotspot .hud-label {
 .combat-banner b { margin-top: 4px; color: #fff8e7; letter-spacing: .1em; }
 
 .explore-hud { height: 108px; color: #f8f0df; background: linear-gradient(180deg, #203029f5, #111b17fa); border-top: 1px solid #c0a45d78; box-shadow: 0 -10px 30px #0005; backdrop-filter: blur(12px); }
-.explore-hud > div { border-right-color: #c9ad6750; }
+.explore-hud > div,
+.explore-hud > button.player-bars { border-right-color: #c9ad6750; }
 .hud-label { color: #b7bdae; }
 .skill-cd {
   background: radial-gradient(circle at 35% 30%, #3f6f59, #1c3329 72%);
