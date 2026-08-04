@@ -855,11 +855,17 @@ export default function App() {
   const dispatch = useCallback((command: GameCommand) => gameStore.dispatch(command), []);
   const [landscapeBlocked, setLandscapeBlocked] = useState(() => window.matchMedia('(orientation: landscape) and (pointer: coarse)').matches);
   const [installHintOpen, setInstallHintOpen] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
   const { needRefresh: [needRefresh], updateServiceWorker } = useRegisterSW();
   const lastActionIdRef = useRef(0);
   const lastOutcomeRef = useRef<string | null>(null);
   const lastPopupKeyRef = useRef<string | null>(null);
   const lastSceneRef = useRef(state.scene);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setShowSplash(false), 1000);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const media = window.matchMedia('(orientation: landscape) and (pointer: coarse)');
@@ -879,6 +885,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (showSplash) return;
     if (state.combat) {
       sound.playBgm('combat');
       return;
@@ -888,7 +895,7 @@ export default function App() {
       return;
     }
     sound.playBgm('cave');
-  }, [state.scene, Boolean(state.combat)]);
+  }, [showSplash, state.scene, Boolean(state.combat)]);
 
   useEffect(() => {
     const previous = lastSceneRef.current;
@@ -948,6 +955,15 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      {showSplash && (
+        <div className="studio-splash" aria-label="未孩游戏" role="img">
+          <img
+            src={`${(import.meta.env.BASE_URL || '/').replace(/\/?$/, '/')}ui/weihai-splash.png?v=3`}
+            alt="未孩游戏"
+            draggable={false}
+          />
+        </div>
+      )}
       {state.scene === 'cave' && <CaveView state={state} dispatch={dispatch} />}
       {state.scene === 'select' && <SelectView state={state} dispatch={dispatch} />}
       {state.scene === 'explore' && state.run && <ExploreView state={state} dispatch={dispatch} />}

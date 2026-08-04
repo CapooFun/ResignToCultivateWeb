@@ -1,7 +1,20 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+
+async function waitForStudioSplash(page: Page) {
+  await expect(page.locator('.studio-splash')).toBeVisible();
+  await expect(page.locator('.studio-splash img')).toBeVisible();
+  await expect(page.locator('.studio-splash')).toHaveCount(0, { timeout: 2500 });
+}
+
+test('未孩游戏启动页约 1 秒后消失', async ({ page }) => {
+  await page.goto('/');
+  await waitForStudioSplash(page);
+  await expect(page.getByRole('heading', { name: '洞府' })).toBeVisible();
+});
 
 test('洞府到小图的首个闭环入口可操作', async ({ page }) => {
   await page.goto('/');
+  await waitForStudioSplash(page);
   await expect(page.getByRole('heading', { name: '洞府' })).toBeVisible();
   await page.getByRole('button', { name: '出发寻求机缘' }).click();
   await expect(page.getByRole('heading', { name: '选择地界' })).toBeVisible();
@@ -12,6 +25,7 @@ test('洞府到小图的首个闭环入口可操作', async ({ page }) => {
 
 test('洞府设施、仓库与存档入口存在', async ({ page }) => {
   await page.goto('/');
+  await waitForStudioSplash(page);
   await expect(page.getByRole('button', { name: /仓库/ })).toBeVisible();
   await expect(page.getByRole('button', { name: /采矿/ })).toBeVisible();
   await expect(page.getByRole('button', { name: /炼丹/ })).toBeVisible();
@@ -23,6 +37,7 @@ test('洞府设施、仓库与存档入口存在', async ({ page }) => {
 
 test('采矿与炼丹弹层 fixed 贴底可开关', async ({ page }) => {
   await page.goto('/');
+  await waitForStudioSplash(page);
   await expect(page.getByRole('heading', { name: '洞府' })).toBeVisible();
 
   await page.getByRole('button', { name: /^矿/ }).click();
@@ -46,6 +61,7 @@ test('采矿与炼丹弹层 fixed 贴底可开关', async ({ page }) => {
 
 test('探索底栏贴底且可点血蓝条开行囊', async ({ page }) => {
   await page.goto('/');
+  await waitForStudioSplash(page);
   await page.getByRole('button', { name: '出发寻求机缘' }).click();
   await page.getByRole('button', { name: /青石谷/ }).click();
   await expect(page.locator('.explore-hud')).toBeVisible();
@@ -75,4 +91,3 @@ test('探索底栏贴底且可点血蓝条开行囊', async ({ page }) => {
   await expect(page.getByRole('dialog', { name: '行囊与装配' })).toBeVisible();
   await page.getByRole('dialog', { name: '行囊与装配' }).getByRole('button', { name: '关闭' }).click();
 });
-

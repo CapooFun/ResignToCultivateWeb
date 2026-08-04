@@ -18,6 +18,7 @@ export default defineConfig({
         'icon-512.png',
         'ui/spirit-vein-ore.png',
         'ui/spirit-stone.png',
+        'ui/weihai-splash.png',
         'audio/bgm/*.m4a',
         'audio/system_sfx/*',
         'audio/combat_sfx/*'
