@@ -862,6 +862,44 @@ button.player-bars.pack-hotspot .hud-label {
 .recipe-list small { color: #6d736e; }
 .recipe-list em { color: #8b4f39; font-style: normal; font-size: 11px; }
 .recipe-list.compact { margin-top: 8px; }
+
+.craft-preview { display: grid; gap: 12px; }
+.craft-preview-card {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  text-align: left;
+  color: var(--ink);
+  background: #fffaf1;
+  border: 1px solid #aaa18f;
+  border-radius: 12px;
+}
+.craft-preview-card em { color: #8b4f39; font-style: normal; font-size: 12px; }
+.craft-preview-card small { color: #6d736e; }
+.craft-stat-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.craft-stat-list li {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f3ebe0;
+  border: 1px solid #d2c7b4;
+  font-size: 13px;
+}
+.craft-preview-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.craft-preview-actions .primary,
+.craft-preview-actions .secondary {
+  width: 100%;
+  margin-top: 0;
+}
 .equipment-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
 .equipment-grid div { padding: 9px; border: 1px solid #aaa18f; border-radius: 9px; background: #ebe4d6; }
 .equipment-grid span, .equipment-grid b { display: block; }

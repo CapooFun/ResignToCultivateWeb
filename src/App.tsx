@@ -11,7 +11,7 @@ import {
   promptInstallApp,
   subscribeInstallPrompt
 } from './game/installPrompt';
-import { mergeSources, usedSlots } from './game/inventory';
+import { canAfford, mergeSources, usedSlots } from './game/inventory';
 import { currentFloor } from './game/mapGenerator';
 import { exportState, importState } from './game/save';
 import { gameStore } from './game/store';
@@ -242,6 +242,29 @@ function ClickableStacks({
   );
 }
 
+/** 炼器/炼丹预览：产物属性行 */
+function craftOutputStatLines(itemId: string): string[] {
+  const item = ITEMS[itemId];
+  if (!item) return [];
+  const lines: string[] = [];
+  if (item.description) lines.push(item.description);
+  if (item.physicalAttack) lines.push(`物攻 +${item.physicalAttack}`);
+  if (item.spellAttack) lines.push(`法攻 +${item.spellAttack}`);
+  if (item.physicalDefense) lines.push(`物防 +${item.physicalDefense}`);
+  if (item.spellDefense) lines.push(`法防 +${item.spellDefense}`);
+  if (item.bagSlots) lines.push(`背包格 +${item.bagSlots}`);
+  if (item.potionSlotBonus) lines.push(`丹药槽 +${item.potionSlotBonus}`);
+  if (item.escapeChanceBonus) lines.push(`逃跑成功率 +${Math.round(item.escapeChanceBonus * 100)}%`);
+  if (item.escapeCooldownReductionMs) lines.push(`逃跑冷却 −${item.escapeCooldownReductionMs / 1000}s`);
+  const potion = POTIONS[itemId];
+  if (potion) {
+    if (potion.healHp) lines.push(`回复气血 ${potion.healHp}`);
+    if (potion.restoreMp) lines.push(`回复灵气 ${potion.restoreMp}`);
+    if (potion.escapeBonus) lines.push(`下次逃跑 +${Math.round(potion.escapeBonus * 100)}%`);
+  }
+  return lines;
+}
+
 function EquipmentPanel({
   state,
   dispatch,
@@ -254,7 +277,7 @@ function EquipmentPanel({
   /** 探索非战斗：只动用身上行囊，不访问仓库 */
   fieldMode?: boolean;
 }) {
-  const [tab, setTab] = useState<PackTab>('all');
+  const [tab, setTab] = useState<PackTab>('gear');
   const [assignItemId, setAssignItemId] = useState<string | null>(null);
   const [focusSlot, setFocusSlot] = useState<EquipmentSlot | null>(null);
   const unlocked = unlockedPotionSlots(state);
@@ -500,9 +523,15 @@ function CraftFacilityPanel({
 }) {
   const tabs = facility === 'forge' ? FORGE_TABS : ALCHEMY_TABS;
   const [tab, setTab] = useState(tabs[0].id);
+  const [previewRecipeId, setPreviewRecipeId] = useState<string | null>(null);
   useEffect(() => {
     setTab(tabs[0].id);
+    setPreviewRecipeId(null);
   }, [facility]);
+
+  useEffect(() => {
+    setPreviewRecipeId(null);
+  }, [tab]);
 
   const recipes = Object.values(RECIPES).filter((recipe) => {
     if (recipe.facility !== facility) return false;
@@ -511,52 +540,99 @@ function CraftFacilityPanel({
     return POTIONS[recipe.output.itemId]?.effect === tab;
   });
   const level = facility === 'alchemy' ? state.cave.alchemyLevel : state.cave.forgeLevel;
+  const preview = previewRecipeId ? RECIPES[previewRecipeId] : null;
+  const previewItem = preview ? ITEMS[preview.output.itemId] : null;
+  const alchemyBonus = facility === 'alchemy' ? (state.reincarnation.talents.alchemy_gift ?? 0) : 0;
+  const available = mergeSources(state.inventory.bag, state.inventory.warehouse);
+  const previewAffordable = preview
+    ? state.cave.spiritStones >= preview.spiritStoneCost && canAfford(available, preview.ingredients)
+    : false;
+  const previewLocked = preview ? (preview.requiredLevel ?? 1) > level : true;
+  const previewOutputCount = preview ? preview.output.count + alchemyBonus : 0;
+  const confirmLabel = facility === 'forge' ? '锻造' : '炼制';
 
   return (
     <Modal title={facility === 'alchemy' ? '炼丹' : '炼器'} onClose={onClose}>
-      <p className="modal-intro">材料可从身上和仓库共同扣除；产物直接入库。</p>
-      <div className="pack-tabs" role="tablist" aria-label={facility === 'alchemy' ? '丹药分类' : '法宝分类'}>
-        {tabs.map((entry) => (
-          <button
-            key={entry.id}
-            type="button"
-            role="tab"
-            aria-selected={tab === entry.id}
-            className={tab === entry.id ? 'active' : ''}
-            onClick={() => setTab(entry.id)}
-          >
-            {entry.label}
-          </button>
-        ))}
-      </div>
-      <div className="recipe-list">
-        {recipes.length === 0 ? (
-          <p className="empty-note">该类暂无配方。</p>
-        ) : recipes.map((recipe) => {
-          const locked = (recipe.requiredLevel ?? 1) > level;
-          const alchemyBonus = facility === 'alchemy' ? (state.reincarnation.talents.alchemy_gift ?? 0) : 0;
-          const outputCount = recipe.output.count + alchemyBonus;
-          return (
+      <p className="modal-intro">材料可从身上和仓库共同扣除；产物直接入库。点配方先看属性，再确认。</p>
+      {!preview && (
+        <div className="pack-tabs" role="tablist" aria-label={facility === 'alchemy' ? '丹药分类' : '法宝分类'}>
+          {tabs.map((entry) => (
             <button
-              key={recipe.id}
-              disabled={locked}
-              className={`quality-frame ${qualityCssClass(ITEMS[recipe.output.itemId]?.quality)}`}
-              onClick={() => dispatch({ type: 'CRAFT', recipeId: recipe.id })}
+              key={entry.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === entry.id}
+              className={tab === entry.id ? 'active' : ''}
+              onClick={() => setTab(entry.id)}
             >
-              <b>{recipe.name} · {ITEMS[recipe.output.itemId]?.quality ?? '凡品'}</b>
-              <small>{recipe.ingredients.map((i) => `${ITEMS[i.itemId].name}×${i.count}`).join(' + ')} · 灵石 {recipe.spiritStoneCost}</small>
-              <em>{locked ? `设施 ${recipe.requiredLevel} 级解锁` : `产出 ${ITEMS[recipe.output.itemId].name}×${outputCount}`}</em>
+              {entry.label}
             </button>
-          );
-        })}
-      </div>
-      <button
-        className="secondary wide"
-        disabled={level >= 3}
-        onClick={() => dispatch({ type: 'UPGRADE_FACILITY', facility })}
-      >
-        {level >= 3 ? '设施已满级' : `升级设施 · ${facilityUpgradeCost(level)} 灵石`}
-      </button>
+          ))}
+        </div>
+      )}
+      {preview && previewItem ? (
+        <div className="craft-preview">
+          <div className={`craft-preview-card quality-frame ${qualityCssClass(previewItem.quality)}`}>
+            <b>{previewItem.name} · {previewItem.quality ?? '凡品'}</b>
+            <em>产出 ×{previewOutputCount}{alchemyBonus > 0 ? `（丹缘 +${alchemyBonus}）` : ''}</em>
+            <ul className="craft-stat-list">
+              {craftOutputStatLines(preview.output.itemId).map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+            <small>
+              材料：{preview.ingredients.map((i) => `${ITEMS[i.itemId].name}×${i.count}`).join(' + ')}
+              {' · '}灵石 {preview.spiritStoneCost}
+            </small>
+            {previewLocked && <p className="empty-note">设施 {preview.requiredLevel} 级解锁</p>}
+            {!previewLocked && !previewAffordable && <p className="empty-note">材料或灵石不足</p>}
+          </div>
+          <div className="craft-preview-actions">
+            <button type="button" className="secondary" onClick={() => setPreviewRecipeId(null)}>取消</button>
+            <button
+              type="button"
+              className="primary"
+              disabled={previewLocked || !previewAffordable}
+              onClick={() => {
+                dispatch({ type: 'CRAFT', recipeId: preview.id });
+                setPreviewRecipeId(null);
+              }}
+            >
+              {confirmLabel}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="recipe-list">
+            {recipes.length === 0 ? (
+              <p className="empty-note">该类暂无配方。</p>
+            ) : recipes.map((recipe) => {
+              const locked = (recipe.requiredLevel ?? 1) > level;
+              const outputCount = recipe.output.count + alchemyBonus;
+              return (
+                <button
+                  key={recipe.id}
+                  disabled={locked}
+                  className={`quality-frame ${qualityCssClass(ITEMS[recipe.output.itemId]?.quality)}`}
+                  onClick={() => setPreviewRecipeId(recipe.id)}
+                >
+                  <b>{recipe.name} · {ITEMS[recipe.output.itemId]?.quality ?? '凡品'}</b>
+                  <small>{recipe.ingredients.map((i) => `${ITEMS[i.itemId].name}×${i.count}`).join(' + ')} · 灵石 {recipe.spiritStoneCost}</small>
+                  <em>{locked ? `设施 ${recipe.requiredLevel} 级解锁` : `产出 ${ITEMS[recipe.output.itemId].name}×${outputCount}`}</em>
+                </button>
+              );
+            })}
+          </div>
+          <button
+            className="secondary wide"
+            disabled={level >= 3}
+            onClick={() => dispatch({ type: 'UPGRADE_FACILITY', facility })}
+          >
+            {level >= 3 ? '设施已满级' : `升级设施 · ${facilityUpgradeCost(level)} 灵石`}
+          </button>
+        </>
+      )}
     </Modal>
   );
 }
@@ -765,7 +841,7 @@ function ExploreView({ state, dispatch }: { state: GameState; dispatch: (command
       <Suspense fallback={<div className="map-loading">地界展开中…</div>}>
         <MapView state={state} dispatch={dispatch} />
       </Suspense>
-      <div className="map-legend"><span>点相邻格或滑动一步</span><span>种子 {run.seed}</span></div>
+      <div className="map-legend"><span>点方向格或滑动一步</span><span>种子 {run.seed}</span></div>
       {pending && <div className="interaction-card"><b>{pending.kind === 'return' ? '回府传送阵' : '传送门'}</b><button onClick={() => dispatch({ type: pending.kind === 'return' ? 'RETURN_CAVE' : 'ADVANCE_FLOOR' })}>{pending.kind === 'return' ? '结束本趟并回府' : '进入下一层'}</button></div>}
       <CombatHud state={state} dispatch={dispatch} onOpenPack={() => setPackOpen(true)} />
       {packOpen && !state.combat && (

@@ -66,9 +66,8 @@ export function parseEnvelope(raw: unknown): SaveEnvelope {
   if (typeof envelope.saveVersion !== 'number') throw new Error(`不支持的存档版本：${String(envelope.saveVersion)}`);
   if (envelope.saveVersion > SAVE_VERSION) throw new Error(`不支持的存档版本：${String(envelope.saveVersion)}`);
   if (!envelope.state || typeof envelope.state !== 'object') throw new Error('存档缺少游戏状态');
-  const state = envelope.saveVersion < SAVE_VERSION || envelope.contentVersion !== CONTENT_VERSION
-    ? migrateGameState(envelope.state)
-    : envelope.state as GameState;
+  // 始终走迁移以刷新派生数值（含临时背包倍率等）
+  const state = migrateGameState(envelope.state);
   return {
     saveVersion: SAVE_VERSION,
     contentVersion: CONTENT_VERSION,

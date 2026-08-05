@@ -308,9 +308,13 @@ function positionEquals(a: Position, b: Position): boolean {
   return a.x === b.x && a.y === b.y;
 }
 
+/** TEMP 热修：朋友试用期间背包容量翻倍，用完删掉此倍率。 */
+const TEMP_BAG_CAPACITY_MULTIPLIER = 2;
+
 function inventoryCapacityWithGear(state: GameState): number {
   const ringId = state.player.equipment.ring;
-  return baseBagCapacity(state.reincarnation) + (ringId ? ITEMS[ringId]?.bagSlots ?? 0 : 0);
+  const base = baseBagCapacity(state.reincarnation) + (ringId ? ITEMS[ringId]?.bagSlots ?? 0 : 0);
+  return base * TEMP_BAG_CAPACITY_MULTIPLIER;
 }
 
 function returnOverflowPotionSlots(state: GameState): void {
