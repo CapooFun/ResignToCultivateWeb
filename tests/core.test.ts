@@ -203,17 +203,20 @@ describe('游戏核心', () => {
 
   it('腰带提升丹药槽，降档多余丹药回包', () => {
     let state = createInitialState('test', 2);
-    state.inventory.warehouse.push({ itemId: 'iron_belt', count: 1 });
-    state = dispatchGameCommand(state, { type: 'EQUIP', itemId: 'iron_belt' }).state;
+    state.inventory.warehouse.push({ itemId: 'belt_5', count: 1 });
+    state = dispatchGameCommand(state, { type: 'EQUIP', itemId: 'belt_5' }).state;
     expect(unlockedPotionSlots(state)).toBe(3);
     state.inventory.bag.push({ itemId: 'pill_mana_s', count: 2 });
     state = dispatchGameCommand(state, { type: 'ASSIGN_POTION', itemId: 'pill_mana_s', slot: 2 }).state;
     expect(state.player.potionBelt[2]?.itemId).toBe('pill_mana_s');
-    state.inventory.warehouse.push({ itemId: 'leather_belt', count: 1 });
-    state = dispatchGameCommand(state, { type: 'EQUIP', itemId: 'leather_belt' }).state;
+    state.inventory.warehouse.push({ itemId: 'iron_belt', count: 1 });
+    state = dispatchGameCommand(state, { type: 'EQUIP', itemId: 'iron_belt' }).state;
     expect(unlockedPotionSlots(state)).toBe(2);
     expect(state.player.potionBelt[2]).toBeNull();
     expect(state.inventory.bag.some((stack) => stack.itemId === 'pill_mana_s') || state.inventory.warehouse.some((stack) => stack.itemId === 'pill_mana_s')).toBe(true);
+    state.inventory.warehouse.push({ itemId: 'leather_belt', count: 1 });
+    state = dispatchGameCommand(state, { type: 'EQUIP', itemId: 'leather_belt' }).state;
+    expect(unlockedPotionSlots(state)).toBe(1);
   });
 
   it('遁药只加下一次逃跑，与鞋子加法', () => {

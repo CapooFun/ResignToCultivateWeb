@@ -683,55 +683,54 @@ export const ITEMS: Record<string, ItemDefinition> = {
     id: 'belt_1',
     name: '韧皮腰带',
     kind: 'equipment',
-    description: '双防 +2，丹药槽上限 2。',
+    description: '双防 +2，不加丹药槽。',
     maxStack: 1,
     quality: '凡品',
     equipmentSlot: 'belt',
     physicalDefense: 2,
-    spellDefense: 2,
-    potionSlotBonus: 1
+    spellDefense: 2
   },
   belt_2: {
     id: 'belt_2',
     name: '玄铁腰带',
     kind: 'equipment',
-    description: '双防 +5，丹药槽上限 3。',
+    description: '双防 +5，丹药槽 +1（共 2）。',
     maxStack: 1,
     quality: '灵器',
     equipmentSlot: 'belt',
     physicalDefense: 5,
     spellDefense: 5,
-    potionSlotBonus: 2
+    potionSlotBonus: 1
   },
   belt_3: {
     id: 'belt_3',
     name: '聚灵腰带',
     kind: 'equipment',
-    description: '双防 +8，丹药槽上限 3。',
+    description: '双防 +8，丹药槽 +1（共 2）。',
     maxStack: 1,
     quality: '灵宝',
     equipmentSlot: 'belt',
     physicalDefense: 8,
     spellDefense: 8,
-    potionSlotBonus: 2
+    potionSlotBonus: 1
   },
   belt_4: {
     id: 'belt_4',
     name: '镇魂腰带',
     kind: 'equipment',
-    description: '双防 +11，丹药槽上限 3。',
+    description: '双防 +11，丹药槽 +1（共 2）。',
     maxStack: 1,
     quality: '玄天灵宝',
     equipmentSlot: 'belt',
     physicalDefense: 11,
     spellDefense: 11,
-    potionSlotBonus: 2
+    potionSlotBonus: 1
   },
   belt_5: {
     id: 'belt_5',
     name: '天罗带',
     kind: 'equipment',
-    description: '双防 +14，丹药槽上限 3。',
+    description: '双防 +14，丹药槽 +2（共 3）。',
     maxStack: 1,
     quality: '通天灵宝',
     equipmentSlot: 'belt',
@@ -743,7 +742,7 @@ export const ITEMS: Record<string, ItemDefinition> = {
     id: 'belt_6',
     name: '仙蚕带',
     kind: 'equipment',
-    description: '双防 +17，丹药槽上限 3。',
+    description: '双防 +17，丹药槽 +2（共 3）。',
     maxStack: 1,
     quality: '？？？',
     equipmentSlot: 'belt',
@@ -915,37 +914,36 @@ export const ITEMS: Record<string, ItemDefinition> = {
     id: 'leather_belt',
     name: '韧皮腰带',
     kind: 'equipment',
-    description: '双防 +2，丹药槽上限 2。',
+    description: '双防 +2，不加丹药槽。',
     maxStack: 1,
     quality: '凡品',
     equipmentSlot: 'belt',
     physicalDefense: 2,
-    spellDefense: 2,
-    potionSlotBonus: 1
+    spellDefense: 2
   },
   iron_belt: {
     id: 'iron_belt',
     name: '玄铁腰带',
     kind: 'equipment',
-    description: '双防 +5，丹药槽上限 3。',
+    description: '双防 +5，丹药槽 +1（共 2）。',
     maxStack: 1,
     quality: '灵器',
     equipmentSlot: 'belt',
     physicalDefense: 5,
     spellDefense: 5,
-    potionSlotBonus: 2
+    potionSlotBonus: 1
   },
   spirit_belt: {
     id: 'spirit_belt',
     name: '聚灵腰带',
     kind: 'equipment',
-    description: '双防 +8，丹药槽上限 3。',
+    description: '双防 +8，丹药槽 +1（共 2）。',
     maxStack: 1,
     quality: '灵宝',
     equipmentSlot: 'belt',
     physicalDefense: 8,
     spellDefense: 8,
-    potionSlotBonus: 2
+    potionSlotBonus: 1
   }
 };
 
