@@ -646,7 +646,14 @@ function CaveView({ state, dispatch }: { state: GameState; dispatch: (command: G
     <main className="screen cave-screen">
       <div className="cave-atmosphere" aria-hidden="true"><span /><span /><span /></div>
       <header className="cave-title">
-        <button type="button" className="cheat-corner" onClick={() => dispatch({ type: 'APPLY_CHEAT' })} title="测试：一键化神满配">风灵月影</button>
+        <button
+          type="button"
+          className={`cheat-corner${state.cheatRestore ? ' active' : ''}`}
+          onClick={() => dispatch({ type: 'APPLY_CHEAT' })}
+          title={state.cheatRestore ? '关闭风灵月影，恢复开启前存档' : '测试：开启最强状态（再点可关）'}
+        >
+          {state.cheatRestore ? '风灵月影·开' : '风灵月影'}
+        </button>
         <p className="eyebrow">人界 · 永久营寨</p>
         <div className="cave-emblem" aria-hidden="true">辞</div>
         <h1>洞府</h1>

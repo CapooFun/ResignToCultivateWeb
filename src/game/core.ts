@@ -192,7 +192,8 @@ export function createInitialState(buildVersion = 'local-dev', seed = 20260804):
     run: null,
     combat: null,
     reincarnation,
-    popup: null
+    popup: null,
+    cheatRestore: null
   };
 }
 
@@ -1275,10 +1276,18 @@ function reincarnate(state: GameState): void {
 }
 
 function applyCheat(state: GameState): void {
-  if (state.scene !== 'cave' && state.scene !== 'select') return;
+  // 已开启则恢复快照（由 dispatch 侧整页替换）；此处只负责开启
+  if (state.scene !== 'cave' && state.scene !== 'select') {
+    message(state, '请先回到洞府再开风灵月影。');
+    return;
+  }
+  const snapshot = deepClone(state);
+  snapshot.cheatRestore = null;
+  state.cheatRestore = snapshot;
   state.scene = 'cave';
   state.run = null;
   state.combat = null;
+  state.popup = null;
   state.player.realmLevel = 5;
   state.player.realm = '化神';
   state.player.peakRealmLevel = 5;
@@ -1321,7 +1330,16 @@ function applyCheat(state: GameState): void {
     ).stacks;
   }
   recalculatePlayer(state, true);
-  message(state, '风灵月影已开：化神后期、六秘术十二心法、顶级法宝与丹药齐备。');
+  message(state, '风灵月影已开：化神满配。再点一次可恢复开启前存档。');
+}
+
+function restoreCheat(state: GameState): GameState | null {
+  if (!state.cheatRestore) return null;
+  const restored = deepClone(state.cheatRestore);
+  restored.cheatRestore = null;
+  restored.meta.buildVersion = state.meta.buildVersion;
+  restored.meta.message = '风灵月影已关，已恢复开启前状态。';
+  return restored;
 }
 
 export function migrateGameState(raw: unknown): GameState {
@@ -1399,6 +1417,7 @@ export function migrateGameState(raw: unknown): GameState {
   else if (player.realmLevel >= 2) player.realm = '筑基';
   else player.realm = '炼气';
   if (!('popup' in state) || state.popup === undefined) state.popup = null;
+  if (!('cheatRestore' in state) || state.cheatRestore === undefined) state.cheatRestore = null;
   ensureMineFields(state);
   if (state.run?.floors) {
     for (const floor of state.run.floors) {
@@ -1474,7 +1493,12 @@ export function dispatchGameCommand(input: GameState, command: GameCommand): Dis
     case 'TOGGLE_SKILL': toggleSkill(state, command.skillId); break;
     case 'BUY_TALENT': buyTalent(state, command.talentId); break;
     case 'REINCARNATE': reincarnate(state); break;
-    case 'APPLY_CHEAT': applyCheat(state); break;
+    case 'APPLY_CHEAT': {
+      const restored = restoreCheat(state);
+      if (restored) return { state: restored, shouldSave: true };
+      applyCheat(state);
+      break;
+    }
     case 'RESET_GAME': return { state: createInitialState(input.meta.buildVersion, input.meta.diagnosticSeed), shouldSave: true };
     case 'SET_MESSAGE': message(state, command.message); break;
     case 'DISMISS_POPUP':

@@ -150,6 +150,12 @@ button:disabled { opacity: .42; cursor: default; }
   backdrop-filter: blur(6px);
 }
 .cheat-corner:active { transform: scale(0.97); }
+.cheat-corner.active {
+  color: #fff8e8;
+  background: #7a5a2e;
+  border-color: #c4a46a;
+  box-shadow: 0 0 0 1px #fff8e844 inset;
+}
 .cave-title::after { content: "云起山静 · 洞天长存"; display: block; margin-top: 10px; color: #808477; font-size: 11px; letter-spacing: .18em; }
 .resource-line { display: flex; justify-content: center; align-items: baseline; gap: 7px; font-family: -apple-system, "PingFang SC", sans-serif; font-size: 12px; }
 .resource-line strong { color: var(--pine); font-size: 17px; margin-right: 8px; }

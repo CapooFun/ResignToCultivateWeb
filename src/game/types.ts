@@ -308,6 +308,8 @@ export interface GameState {
   combat: CombatState | null;
   reincarnation: ReincarnationState;
   popup: GamePopup | null;
+  /** 风灵月影开启前的完整快照；再点一次恢复。不嵌套自身。 */
+  cheatRestore: GameState | null;
 }
 
 export interface SaveEnvelope {

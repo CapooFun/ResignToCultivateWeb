@@ -280,6 +280,21 @@ describe('游戏核心', () => {
     expect(state.scene).toBe('reincarnation');
   });
 
+  it('风灵月影可开关：开启变最强，再点恢复开启前状态', () => {
+    let state = createInitialState('test', 42);
+    const stonesBefore = state.cave.spiritStones;
+    const realmBefore = state.player.realmLevel;
+    state = dispatchGameCommand(state, { type: 'APPLY_CHEAT' }).state;
+    expect(state.cheatRestore).not.toBeNull();
+    expect(state.player.realmLevel).toBe(5);
+    expect(state.cave.spiritStones).toBeGreaterThanOrEqual(9999);
+    state = dispatchGameCommand(state, { type: 'APPLY_CHEAT' }).state;
+    expect(state.cheatRestore).toBeNull();
+    expect(state.player.realmLevel).toBe(realmBefore);
+    expect(state.cave.spiritStones).toBe(stonesBefore);
+    expect(state.meta.message).toMatch(/已关/);
+  });
+
   it('寿元耗尽进入轮回，仓库与设施保留、身上清空', () => {
     let state = startRun();
     const warehouseBefore = structuredClone(state.inventory.warehouse);
