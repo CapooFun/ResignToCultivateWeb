@@ -1,5 +1,6 @@
 import { createInitialState, dispatchGameCommand } from './core';
 import { clearSavedState, loadState, saveState } from './save';
+import { observeTelemetry, startTelemetry } from './telemetry';
 import type { GameCommand, GameState } from './types';
 
 type Listener = (state: GameState) => void;
@@ -53,12 +54,15 @@ export class GameStore {
       this.state.meta.message = `存档读取失败，已使用新档：${error instanceof Error ? error.message : '未知错误'}`;
     }
     this.loaded = true;
+    startTelemetry(this.state);
     this.emit();
   }
 
   dispatch(command: GameCommand): void {
+    const before = this.state;
     const result = dispatchGameCommand(this.state, command);
     this.state = result.state;
+    observeTelemetry(before, this.state, command);
     this.emit();
     if (result.shouldSave) {
       const snapshot = structuredClone(this.state);

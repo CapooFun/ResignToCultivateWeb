@@ -15,6 +15,7 @@ import { canAfford, mergeSources, usedSlots } from './game/inventory';
 import { currentFloor } from './game/mapGenerator';
 import { exportState, importState } from './game/save';
 import { gameStore } from './game/store';
+import { getPlayStats, isTelemetryOptedOut, setTelemetryOptOut } from './game/telemetry';
 import type { CombatActionEvent, EquipmentSlot, GameCommand, GameState, ItemStack } from './game/types';
 
 function playCombatActionSfx(action: CombatActionEvent): void {
@@ -1063,6 +1064,8 @@ function ReincarnationView({ state, dispatch }: { state: GameState; dispatch: (c
 function SettingsModal({ state, onClose }: { state: GameState; onClose: () => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [muted, setMuted] = useState(() => sound.isMuted());
+  const [optOut, setOptOut] = useState(() => isTelemetryOptedOut());
+  const stats = getPlayStats();
   const download = () => {
     const blob = new Blob([exportState(state)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -1082,10 +1085,24 @@ function SettingsModal({ state, onClose }: { state: GameState; onClose: () => vo
     sound.setMuted(next);
     setMuted(next);
   };
+  const toggleTelemetry = () => {
+    const next = !optOut;
+    setTelemetryOptOut(next);
+    setOptOut(next);
+  };
   return (
     <Modal title="存档与试玩信息" onClose={onClose}>
       <dl className="diagnostics"><div><dt>构建</dt><dd>{state.meta.buildVersion}</dd></div><div><dt>存档版本</dt><dd>{state.meta.saveVersion}</dd></div><div><dt>诊断种子</dt><dd>{state.meta.diagnosticSeed}</dd></div></dl>
       <p>存档只保存在当前设备浏览器。建议试玩一段时间后导出备份。</p>
+      <dl className="diagnostics">
+        <div><dt>试玩会话</dt><dd>{stats.sessions}</dd></div>
+        <div><dt>探索趟数</dt><dd>{stats.runs}</dd></div>
+        <div><dt>死亡</dt><dd>{stats.deaths}</dd></div>
+        <div><dt>战斗胜/逃</dt><dd>{stats.combatWins}/{stats.combatFlees}</dd></div>
+        <div><dt>游玩约</dt><dd>{Math.round(stats.playTimeMs / 60000)} 分</dd></div>
+      </dl>
+      <p className="install-note">试玩会匿名上报游玩次数等统计（无姓名/账号，仅随机编号），方便作者改进。可随时关闭。</p>
+      <button className="secondary wide" onClick={toggleTelemetry}>{optOut ? '开启匿名试玩统计' : '关闭匿名试玩统计'}</button>
       <button className="secondary wide" onClick={toggleMute}>{muted ? '开启音效' : '关闭音效'}</button>
       <button className="primary wide" onClick={download}>导出存档</button>
       <button className="secondary wide" onClick={() => inputRef.current?.click()}>导入存档</button>
