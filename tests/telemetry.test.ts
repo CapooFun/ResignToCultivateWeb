@@ -19,11 +19,19 @@ function installMemoryStorage(): void {
     get length() { return memory.size; }
   };
   vi.stubGlobal('localStorage', storage);
+  vi.stubGlobal('navigator', {
+    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)',
+    language: 'zh-CN',
+    maxTouchPoints: 5,
+    standalone: false
+  });
+  vi.stubGlobal('screen', { width: 390, height: 844 });
   vi.stubGlobal('document', { hidden: false, addEventListener() { /* noop */ } });
   vi.stubGlobal('window', {
     setTimeout: globalThis.setTimeout.bind(globalThis),
     clearTimeout: globalThis.clearTimeout.bind(globalThis),
-    addEventListener() { /* noop */ }
+    addEventListener() { /* noop */ },
+    matchMedia: () => ({ matches: false })
   });
 }
 

@@ -1097,11 +1097,15 @@ function SettingsModal({ state, onClose }: { state: GameState; onClose: () => vo
       <dl className="diagnostics">
         <div><dt>试玩会话</dt><dd>{stats.sessions}</dd></div>
         <div><dt>探索趟数</dt><dd>{stats.runs}</dd></div>
-        <div><dt>死亡</dt><dd>{stats.deaths}</dd></div>
+        <div><dt>死亡 / 转世</dt><dd>{stats.deaths} / {stats.reincarnations}</dd></div>
         <div><dt>战斗胜/逃</dt><dd>{stats.combatWins}/{stats.combatFlees}</dd></div>
+        <div><dt>精英/Boss击杀</dt><dd>{stats.eliteKills}/{stats.bossKills}</dd></div>
+        <div><dt>炼制</dt><dd>{stats.crafts}（丹{stats.alchemyCrafts}/器{stats.forgeCrafts}）</dd></div>
+        <div><dt>里程碑</dt><dd>{stats.milestones.length}</dd></div>
         <div><dt>游玩约</dt><dd>{Math.round(stats.playTimeMs / 60000)} 分</dd></div>
+        <div><dt>设备</dt><dd>{stats.device ? `${stats.device.os}/${stats.device.form}` : '—'}</dd></div>
       </dl>
-      <p className="install-note">试玩会匿名上报游玩次数等统计（无姓名/账号，仅随机编号），方便作者改进。可随时关闭。</p>
+      <p className="install-note">试玩会匿名上报游玩与进度统计（随机编号 + 粗略设备类型，无姓名账号），方便作者改进。可随时关闭。</p>
       <button className="secondary wide" onClick={toggleTelemetry}>{optOut ? '开启匿名试玩统计' : '关闭匿名试玩统计'}</button>
       <button className="secondary wide" onClick={toggleMute}>{muted ? '开启音效' : '关闭音效'}</button>
       <button className="primary wide" onClick={download}>导出存档</button>
