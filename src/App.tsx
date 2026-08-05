@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useS
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { MinePanel } from './components/MinePanel';
 import { sound } from './game/audio';
-import { enemyDisplayName, facilityUpgradeCost, ITEMS, MAP_TIERS, PASSIVES, POTIONS, qualityCssClass, RECIPES, SKILLS, TALENTS } from './game/content';
+import { enemyDisplayName, facilityUpgradeCost, ITEMS, itemSellPrice, MAP_TIERS, PASSIVES, POTIONS, qualityCssClass, RECIPES, SKILLS, TALENTS } from './game/content';
 import { escapeChanceFor, escapeCooldownMs, talentCost, unlockedPotionSlots } from './game/core';
 import { markInstallHintSeen, shouldOfferInstallHint } from './game/installHint';
 import {
@@ -216,17 +216,21 @@ function InstallHintPopup({ onClose }: { onClose: () => void }) {
 function ClickableStacks({
   stacks,
   onSelect,
-  emptyText = '空'
+  emptyText = '空',
+  priceMode = false
 }: {
   stacks: ItemStack[];
   onSelect: (itemId: string) => void;
   emptyText?: string;
+  /** 卖掉模式：展示回收价 */
+  priceMode?: boolean;
 }) {
   if (stacks.length === 0) return <p className="empty-note">{emptyText}</p>;
   return (
     <div className="stack-list">
       {stacks.map((stack) => {
         const item = ITEMS[stack.itemId];
+        const unit = itemSellPrice(stack.itemId);
         return (
           <button
             type="button"
@@ -234,8 +238,12 @@ function ClickableStacks({
             key={stack.itemId}
             onClick={() => onSelect(stack.itemId)}
           >
-            <b>{item?.name ?? stack.itemId}</b>
-            <small>{item?.quality ? `${item.quality} · ` : ''}×{stack.count}</small>
+            <b>{priceMode ? `卖掉 ${item?.name ?? stack.itemId}` : (item?.name ?? stack.itemId)}</b>
+            <small>
+              {priceMode
+                ? `${item?.quality ?? '凡品'} · ×${stack.count} · 回收 ${unit * stack.count} 灵石`
+                : `${item?.quality ? `${item.quality} · ` : ''}×${stack.count}`}
+            </small>
           </button>
         );
       })}
@@ -770,8 +778,19 @@ function CraftFacilityPanel({
 
 function CaveView({ state, dispatch }: { state: GameState; dispatch: (command: GameCommand) => void }) {
   const [panel, setPanel] = useState<CavePanel>(null);
+  const [warehouseSellMode, setWarehouseSellMode] = useState(false);
   const alchemyRecipes = Object.values(RECIPES).filter((recipe) => recipe.facility === 'alchemy');
   const forgeRecipes = Object.values(RECIPES).filter((recipe) => recipe.facility === 'forge');
+
+  const openPanel = (next: CavePanel) => {
+    setWarehouseSellMode(false);
+    setPanel(next);
+  };
+
+  const closePanel = () => {
+    setWarehouseSellMode(false);
+    setPanel(null);
+  };
 
   return (
     <main className="screen cave-screen">
@@ -792,10 +811,10 @@ function CaveView({ state, dispatch }: { state: GameState; dispatch: (command: G
       </header>
 
       <section className="facility-grid" aria-label="洞府设施">
-        <button className="facility-mine" onClick={() => setPanel('mine')}><i>矿</i><b>采矿</b><small>Lv.{state.cave.mineLevel} · 叩击灵脉 · 待收 {state.cave.mineStored}</small></button>
-        <button className="facility-alchemy" onClick={() => setPanel('alchemy')}><i>丹</i><b>炼丹</b><small>Lv.{state.cave.alchemyLevel} · {alchemyRecipes.length} 配方</small></button>
-        <button className="facility-forge" onClick={() => setPanel('forge')}><i>器</i><b>炼器</b><small>Lv.{state.cave.forgeLevel} · {forgeRecipes.length} 配方</small></button>
-        <button className="facility-warehouse" onClick={() => setPanel('warehouse')}><i>仓</i><b>仓库</b><small>{usedSlots(state.inventory.warehouse)}/{state.inventory.warehouseCapacity} 格</small></button>
+        <button className="facility-mine" onClick={() => openPanel('mine')}><i>矿</i><b>采矿</b><small>Lv.{state.cave.mineLevel} · 叩击灵脉 · 待收 {state.cave.mineStored}</small></button>
+        <button className="facility-alchemy" onClick={() => openPanel('alchemy')}><i>丹</i><b>炼丹</b><small>Lv.{state.cave.alchemyLevel} · {alchemyRecipes.length} 配方</small></button>
+        <button className="facility-forge" onClick={() => openPanel('forge')}><i>器</i><b>炼器</b><small>Lv.{state.cave.forgeLevel} · {forgeRecipes.length} 配方</small></button>
+        <button className="facility-warehouse" onClick={() => openPanel('warehouse')}><i>仓</i><b>仓库</b><small>{usedSlots(state.inventory.warehouse)}/{state.inventory.warehouseCapacity} 格</small></button>
       </section>
 
       <section className="character-summary">
@@ -805,36 +824,57 @@ function CaveView({ state, dispatch }: { state: GameState; dispatch: (command: G
       </section>
 
       <section className="cave-actions">
-        <button className="secondary" onClick={() => setPanel('equipment')}>装配与行囊</button>
+        <button className="secondary" onClick={() => openPanel('equipment')}>装配与行囊</button>
         <button className="primary" onClick={() => dispatch({ type: 'OPEN_SELECT' })}>出发寻求机缘</button>
-        <button className="text-button" onClick={() => setPanel('settings')}>存档与试玩信息</button>
+        <button className="text-button" onClick={() => openPanel('settings')}>存档与试玩信息</button>
       </section>
 
       {panel === 'warehouse' && (
-        <Modal title="仓库存取" onClose={() => setPanel(null)}>
-          <p className="modal-intro">点击物品即可在两边转移；死亡后仓库保留。</p>
+        <Modal title="仓库存取" onClose={closePanel}>
+          <p className="modal-intro">
+            {warehouseSellMode
+              ? '卖掉模式：点仓库里的物品整组卖出，换一点灵石（便宜意思）。'
+              : '点击物品即可在两边转移；死亡后仓库保留。回府后也可卖掉不要的东西。'}
+          </p>
+          <button
+            type="button"
+            className={warehouseSellMode ? 'danger wide' : 'secondary wide'}
+            onClick={() => setWarehouseSellMode((value) => !value)}
+          >
+            {warehouseSellMode ? '关闭卖掉' : '启用卖掉'}
+          </button>
           <div className="inventory-columns">
             <div>
               <h3>身上 · {usedSlots(state.inventory.bag)}/{state.inventory.capacity}</h3>
               <ClickableStacks
                 stacks={state.inventory.bag}
-                onSelect={(itemId) => dispatch({ type: 'TRANSFER_ITEM', itemId, direction: 'toWarehouse' })}
+                onSelect={(itemId) => {
+                  if (warehouseSellMode) return;
+                  dispatch({ type: 'TRANSFER_ITEM', itemId, direction: 'toWarehouse' });
+                }}
+                emptyText={warehouseSellMode ? '卖掉只作用于仓库侧' : '空'}
               />
             </div>
-            <div>
+            <div className={warehouseSellMode ? 'warehouse-sell-mode' : undefined}>
               <h3>仓库 · {usedSlots(state.inventory.warehouse)}/{state.inventory.warehouseCapacity}</h3>
               <ClickableStacks
                 stacks={state.inventory.warehouse}
-                onSelect={(itemId) => dispatch({ type: 'TRANSFER_ITEM', itemId, direction: 'toBag' })}
+                priceMode={warehouseSellMode}
+                onSelect={(itemId) => {
+                  if (warehouseSellMode) dispatch({ type: 'SELL_WAREHOUSE_ITEM', itemId });
+                  else dispatch({ type: 'TRANSFER_ITEM', itemId, direction: 'toBag' });
+                }}
               />
             </div>
           </div>
-          <button className="primary wide" onClick={() => dispatch({ type: 'TRANSFER_ALL_TO_WAREHOUSE' })}>一键将身上物品入库</button>
+          {!warehouseSellMode && (
+            <button className="primary wide" onClick={() => dispatch({ type: 'TRANSFER_ALL_TO_WAREHOUSE' })}>一键将身上物品入库</button>
+          )}
         </Modal>
       )}
 
       {panel === 'mine' && (
-        <MinePanel state={state} dispatch={dispatch} onClose={() => setPanel(null)} />
+        <MinePanel state={state} dispatch={dispatch} onClose={closePanel} />
       )}
 
       {(panel === 'alchemy' || panel === 'forge') && (
@@ -842,13 +882,13 @@ function CaveView({ state, dispatch }: { state: GameState; dispatch: (command: G
           facility={panel}
           state={state}
           dispatch={dispatch}
-          onClose={() => setPanel(null)}
+          onClose={closePanel}
         />
       )}
 
-      {panel === 'equipment' && <EquipmentPanel state={state} dispatch={dispatch} onClose={() => setPanel(null)} />}
+      {panel === 'equipment' && <EquipmentPanel state={state} dispatch={dispatch} onClose={closePanel} />}
 
-      {panel === 'settings' && <SettingsModal state={state} onClose={() => setPanel(null)} />}
+      {panel === 'settings' && <SettingsModal state={state} onClose={closePanel} />}
     </main>
   );
 }

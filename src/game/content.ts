@@ -2770,6 +2770,33 @@ export const TALENTS: Record<string, TalentDefinition> = {
   }
 };
 
+/** 洞府卖掉回收价（便宜意思下）。装备按品质；灵材/丹药更低。 */
+const EQUIPMENT_SELL_PRICE: Record<ItemQuality, number> = {
+  '凡品': 3,
+  '灵器': 8,
+  '灵宝': 18,
+  '玄天灵宝': 40,
+  '通天灵宝': 80,
+  '？？？': 150
+};
+
+const SCRAP_SELL_PRICE: Record<ItemQuality, number> = {
+  '凡品': 1,
+  '灵器': 2,
+  '灵宝': 3,
+  '玄天灵宝': 5,
+  '通天灵宝': 8,
+  '？？？': 12
+};
+
+export function itemSellPrice(itemId: string): number {
+  const item = ITEMS[itemId];
+  if (!item) return 1;
+  const quality = item.quality ?? '凡品';
+  if (item.kind === 'equipment') return EQUIPMENT_SELL_PRICE[quality] ?? 3;
+  return SCRAP_SELL_PRICE[quality] ?? 1;
+}
+
 export const BEST_GEAR: Record<string, string> = {
   melee: 'melee_6', ranged: 'ranged_6', armor: 'armor_6', ring: 'ring_6', shoes: 'shoes_6', belt: 'belt_6'
 };

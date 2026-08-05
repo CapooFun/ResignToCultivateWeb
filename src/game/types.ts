@@ -349,6 +349,7 @@ export type GameCommand =
   | { type: 'REINCARNATE' }
   | { type: 'APPLY_CHEAT' }
   | { type: 'DISCARD_BAG_ITEM'; itemId: string }
+  | { type: 'SELL_WAREHOUSE_ITEM'; itemId: string }
   | { type: 'CLEAR_BAG_FULL_PROMPT' }
   | { type: 'RESET_GAME' }
   | { type: 'SET_MESSAGE'; message: string }

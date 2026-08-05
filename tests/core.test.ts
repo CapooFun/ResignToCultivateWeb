@@ -311,6 +311,44 @@ describe('游戏核心', () => {
     expect(state.meta.message).toMatch(/已丢弃/);
   });
 
+  it('洞府仓库可卖掉物品换灵石', () => {
+    let state = createInitialState();
+    state.inventory.warehouse = [
+      { itemId: 'melee_1', count: 1 },
+      { itemId: 'spirit_herb', count: 3 }
+    ];
+    const before = state.cave.spiritStones;
+    state = dispatchGameCommand(state, { type: 'SELL_WAREHOUSE_ITEM', itemId: 'melee_1' }).state;
+    expect(state.inventory.warehouse.some((stack) => stack.itemId === 'melee_1')).toBe(false);
+    expect(state.cave.spiritStones).toBe(before + 3);
+    expect(state.meta.message).toMatch(/卖掉.*灵石 3/);
+    state = dispatchGameCommand(state, { type: 'SELL_WAREHOUSE_ITEM', itemId: 'spirit_herb' }).state;
+    expect(state.inventory.warehouse.some((stack) => stack.itemId === 'spirit_herb')).toBe(false);
+    expect(state.cave.spiritStones).toBe(before + 3 + 3);
+  });
+
+  it('境界不足挡路后仍可往其他方向移动', () => {
+    let state = startRun();
+    const floor = currentFloor(state.run!);
+    const from = { x: 4, y: 4 };
+    state.run!.playerPosition = from;
+    floor.tiles[from.y][from.x].terrain = 'plain';
+    floor.tiles[from.y - 1][from.x].terrain = 'mountain';
+    floor.tiles[from.y + 1][from.x].terrain = 'plain';
+    for (const entity of floor.entities) {
+      if (entity.position.x === from.x && (entity.position.y === from.y || entity.position.y === from.y - 1 || entity.position.y === from.y + 1)) {
+        entity.cleared = true;
+      }
+    }
+    state = dispatchGameCommand(state, { type: 'MOVE', direction: 'up' }).state;
+    expect(state.run!.playerPosition).toEqual(from);
+    expect(state.meta.message).toMatch(/境界不足/);
+    expect(state.combat).toBeNull();
+    expect(state.popup).toBeNull();
+    state = dispatchGameCommand(state, { type: 'MOVE', direction: 'down' }).state;
+    expect(state.run!.playerPosition).toEqual({ x: from.x, y: from.y + 1 });
+  });
+
   it('行囊满拾取会提示丢弃', () => {
     let state = startRun();
     state.inventory.capacity = 1;

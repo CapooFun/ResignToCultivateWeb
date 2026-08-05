@@ -8,6 +8,7 @@ import {
   enemyDisplayName,
   facilityUpgradeCost,
   ITEMS,
+  itemSellPrice,
   MAP_TIERS,
   MAX_EQUIPPED_SKILLS,
   MAX_ESCAPE_CHANCE,
@@ -840,6 +841,24 @@ function discardBagItem(state: GameState, itemId: string): void {
   state.bagFullPrompt = false;
 }
 
+function sellWarehouseItem(state: GameState, itemId: string): void {
+  if (state.scene !== 'cave') {
+    message(state, '回洞府后才能卖掉仓库物品。');
+    return;
+  }
+  const have = itemCount(state.inventory.warehouse, itemId);
+  if (have <= 0) {
+    message(state, '仓库中没有这件物品。');
+    return;
+  }
+  const unit = itemSellPrice(itemId);
+  const gained = unit * have;
+  state.inventory.warehouse = removeItem(state.inventory.warehouse, itemId, have).stacks;
+  state.cave.spiritStones += gained;
+  const name = ITEMS[itemId]?.name ?? itemId;
+  message(state, `卖掉 ${name} ×${have}，收回灵石 ${gained}。`);
+}
+
 function awardExperience(state: GameState, amount: number): string | null {
   state.player.exp += amount;
   const oldLevel = state.player.realmLevel;
@@ -1016,10 +1035,20 @@ function movePlayer(state: GameState, direction: keyof typeof DIRECTION_DELTA): 
   if (state.scene !== 'explore' || !state.run || state.combat || hasPopup(state)) return;
   const floor = currentFloor(state.run);
   const delta = DIRECTION_DELTA[direction];
-  const target = { x: state.run.playerPosition.x + delta.x, y: state.run.playerPosition.y + delta.y };
+  const from = state.run.playerPosition;
+  const target = { x: from.x + delta.x, y: from.y + delta.y };
   if (target.x < 0 || target.y < 0 || target.x >= floor.width || target.y >= floor.height) return;
-  if (!canEnterTerrain(floor.tiles[target.y][target.x].terrain, state.player.realm)) {
-    message(state, `当前境界不足，无法进入${floor.tiles[target.y][target.x].terrain === 'water' ? '水域' : '山脉'}。`);
+  const targetTerrain = floor.tiles[target.y][target.x].terrain;
+  const currentTerrain = floor.tiles[from.y][from.x].terrain;
+  const stranded = !canEnterTerrain(currentTerrain, state.player.realm);
+  // 正常：目标格境界不够则挡下，人仍停在原地，可往其他方向走。
+  // 兜底：若已站在不可进入地形上，只允许撤往可走格，避免彻底卡死。
+  if (!canEnterTerrain(targetTerrain, state.player.realm)) {
+    if (stranded) {
+      message(state, '此处不宜久留，请先退往可走之地。');
+    } else {
+      message(state, `当前境界不足，无法进入${targetTerrain === 'water' ? '水域' : '山脉'}。`);
+    }
     return;
   }
   state.run.pendingInteractionId = null;
@@ -1532,6 +1561,7 @@ export function dispatchGameCommand(input: GameState, command: GameCommand): Dis
       break;
     }
     case 'DISCARD_BAG_ITEM': discardBagItem(state, command.itemId); break;
+    case 'SELL_WAREHOUSE_ITEM': sellWarehouseItem(state, command.itemId); break;
     case 'CLEAR_BAG_FULL_PROMPT': state.bagFullPrompt = false; break;
     case 'RESET_GAME': return { state: createInitialState(input.meta.buildVersion, input.meta.diagnosticSeed), shouldSave: true };
     case 'SET_MESSAGE': message(state, command.message); break;

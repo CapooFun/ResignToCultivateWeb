@@ -542,6 +542,12 @@ export function observeTelemetry(before: GameState, after: GameState, command: G
     enqueue('discard', { itemId: command.itemId });
   }
 
+  if (command.type === 'SELL_WAREHOUSE_ITEM') {
+    stats.discards += 1;
+    unlockMilestone('first_discard');
+    enqueue('discard', { itemId: command.itemId, via: 'sell' });
+  }
+
   if (command.type === 'COLLECT_MINE') {
     stats.mineCollects += 1;
     enqueue('mine_collect', { stones: after.cave.spiritStones });

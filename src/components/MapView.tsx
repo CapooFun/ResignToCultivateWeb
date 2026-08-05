@@ -83,7 +83,10 @@ class GridScene extends Phaser.Scene {
 
   private handlePointerUp(pointer: Phaser.Input.Pointer): void {
     const state = this.bridge.state;
-    if (!state.run || state.combat || state.popup || !this.pointerStart) return;
+    if (!state.run || state.combat || state.popup || !this.pointerStart) {
+      this.pointerStart = null;
+      return;
+    }
     const dx = pointer.x - this.pointerStart.x;
     const dy = pointer.y - this.pointerStart.y;
     this.pointerStart = null;
@@ -97,7 +100,10 @@ class GridScene extends Phaser.Scene {
     const tilePx = this.tileSize();
     const startX = Phaser.Math.Clamp(state.run.playerPosition.x - Math.floor(columns / 2), 0, Math.max(0, floor.width - columns));
     const startY = Phaser.Math.Clamp(state.run.playerPosition.y - Math.floor(rows / 2), 0, Math.max(0, floor.height - rows));
-    const tile = { x: startX + Math.floor(pointer.x / tilePx), y: startY + Math.floor(pointer.y / tilePx) };
+    // 用世界坐标，避免画布被 CSS 拉伸后点到错格
+    const worldX = pointer.worldX;
+    const worldY = pointer.worldY;
+    const tile = { x: startX + Math.floor(worldX / tilePx), y: startY + Math.floor(worldY / tilePx) };
     const direction = directionBetween(state.run.playerPosition, tile);
     if (direction) this.bridge.dispatch({ type: 'MOVE', direction });
   }
@@ -299,7 +305,8 @@ export function MapView({ state, dispatch }: MapViewProps) {
         parent: hostRef.current,
         transparent: false,
         render: { antialias: true, pixelArt: false },
-        scale: { mode: Phaser.Scale.ENVELOP, autoCenter: Phaser.Scale.CENTER_BOTH },
+        // FIT：保持比例完整显示；勿用 ENVELOP + CSS 强行拉满，否则点格方向会错、像卡住
+        scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
         scene: [GridScene],
         input: { activePointers: 2 }
       });
