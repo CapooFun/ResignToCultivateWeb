@@ -38,7 +38,11 @@ export class GameStore {
         this.state = loaded.state;
         this.state.meta.buildVersion = __BUILD_VERSION__;
         if (loaded.recovered) this.state.meta.message = '主存档损坏，已从上一份成功存档恢复。';
-        if (this.state.combat?.awaitingAnimation) {
+        if (this.state.combat && this.state.combat.outcome !== 'active') {
+          // 战败/胜负已定但动画未结算的存档（含旧版卡死档）立刻收尾
+          this.state = dispatchGameCommand(this.state, { type: 'COMBAT_ANIMATION_DONE' }).state;
+          await saveState(this.state);
+        } else if (this.state.combat?.awaitingAnimation) {
           this.state.combat.awaitingAnimation = false;
           this.state.meta.message = '战斗已从上一个动作结算点继续。';
         }

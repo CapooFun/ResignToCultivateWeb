@@ -702,11 +702,15 @@ function enemyBasicAction(state: GameState): void {
 
 function tickCombat(state: GameState, deltaMs: number): void {
   const combat = state.combat;
-  if (!combat || combat.outcome === 'defeat') return;
-  if (combat.outcome === 'victory' || combat.outcome === 'fled') {
+  if (!combat) return;
+  // 胜利/逃跑/战败都要走完结算；战败若早退会卡在 0 血战斗里（刷新后更明显）
+  if (combat.outcome === 'victory' || combat.outcome === 'fled' || combat.outcome === 'defeat') {
     if (combat.awaitingAnimation) {
       combat.awaitingElapsedMs += Math.min(120, Math.max(0, deltaMs));
       if (combat.awaitingElapsedMs >= ANIMATION_STUCK_MS) finishCombatAnimation(state);
+    } else {
+      // 读档清掉 awaitingAnimation 后，终端态仍需立刻结算
+      finishCombatAnimation(state);
     }
     return;
   }

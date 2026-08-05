@@ -240,6 +240,46 @@ describe('游戏核心', () => {
     expect(state.player.maxHp).toBe(Math.round(baseHp * (1 + 0.08 * 2)));
   });
 
+  it('战败动画结束后进入轮回', () => {
+    let state = enterFirstEnemy(startRun());
+    state.combat!.player.hp = 0;
+    state.player.hp = 0;
+    state.combat!.outcome = 'defeat';
+    state.combat!.awaitingAnimation = true;
+    state.combat!.lastAction = {
+      id: 1, actor: 'enemy', kind: 'basic', name: '扑击', damage: 99, healing: 0, mpDelta: 0, critical: false, missed: false
+    };
+    state = dispatchGameCommand(state, { type: 'COMBAT_ANIMATION_DONE' }).state;
+    expect(state.combat).toBeNull();
+    expect(state.scene).toBe('reincarnation');
+    expect(state.reincarnation.totalDeaths).toBe(1);
+  });
+
+  it('战败后动画超时或读档清标记也能进入轮回，不会卡在 0 血', () => {
+    let state = enterFirstEnemy(startRun());
+    state.combat!.player.hp = 0;
+    state.player.hp = 0;
+    state.combat!.outcome = 'defeat';
+    // 模拟读档：清掉 awaitingAnimation，旧逻辑会永久卡死
+    state.combat!.awaitingAnimation = false;
+    state.combat!.awaitingElapsedMs = 0;
+    state = dispatchGameCommand(state, { type: 'TICK_COMBAT', deltaMs: 16 }).state;
+    expect(state.combat).toBeNull();
+    expect(state.scene).toBe('reincarnation');
+  });
+
+  it('战败动画卡住超时也会进入轮回', () => {
+    let state = enterFirstEnemy(startRun());
+    state.combat!.player.hp = 0;
+    state.player.hp = 0;
+    state.combat!.outcome = 'defeat';
+    state.combat!.awaitingAnimation = true;
+    state.combat!.awaitingElapsedMs = 1100;
+    state = dispatchGameCommand(state, { type: 'TICK_COMBAT', deltaMs: 120 }).state;
+    expect(state.combat).toBeNull();
+    expect(state.scene).toBe('reincarnation');
+  });
+
   it('寿元耗尽进入轮回，仓库与设施保留、身上清空', () => {
     let state = startRun();
     const warehouseBefore = structuredClone(state.inventory.warehouse);
