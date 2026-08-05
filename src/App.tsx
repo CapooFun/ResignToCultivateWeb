@@ -242,12 +242,11 @@ function ClickableStacks({
   );
 }
 
-/** 炼器/炼丹预览：产物属性行 */
-function craftOutputStatLines(itemId: string): string[] {
+/** 物品结构化属性 */
+function itemStatLines(itemId: string): string[] {
   const item = ITEMS[itemId];
   if (!item) return [];
   const lines: string[] = [];
-  if (item.description) lines.push(item.description);
   if (item.physicalAttack) lines.push(`物攻 +${item.physicalAttack}`);
   if (item.spellAttack) lines.push(`法攻 +${item.spellAttack}`);
   if (item.physicalDefense) lines.push(`物防 +${item.physicalDefense}`);
@@ -262,7 +261,55 @@ function craftOutputStatLines(itemId: string): string[] {
     if (potion.restoreMp) lines.push(`回复灵气 ${potion.restoreMp}`);
     if (potion.escapeBonus) lines.push(`下次逃跑 +${Math.round(potion.escapeBonus * 100)}%`);
   }
+  if (lines.length === 0 && item.description) lines.push(item.description);
   return lines;
+}
+
+function ItemInspectSheet({
+  itemId,
+  badge,
+  cancelLabel = '关闭',
+  confirmLabel,
+  onCancel,
+  onConfirm
+}: {
+  itemId: string;
+  badge?: string;
+  cancelLabel?: string;
+  confirmLabel?: string;
+  onCancel: () => void;
+  onConfirm?: () => void;
+}) {
+  const item = ITEMS[itemId];
+  if (!item) return null;
+  const stats = itemStatLines(itemId);
+  const slotLabel = item.equipmentSlot
+    ? SLOT_NAME[item.equipmentSlot]
+    : item.kind === 'potion' ? '丹药' : item.kind === 'material' ? '灵材' : '';
+  return (
+    <div className="item-inspect">
+      <div className={`item-inspect-card quality-frame ${qualityCssClass(item.quality)}`}>
+        <b>{item.name} · {item.quality ?? '凡品'}</b>
+        {(badge || slotLabel) && <em>{[badge, slotLabel].filter(Boolean).join(' · ')}</em>}
+        {item.description && !stats.includes(item.description) && (
+          <small className="item-inspect-desc">{item.description}</small>
+        )}
+        <ul className="craft-stat-list">
+          {stats.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      </div>
+      <div className="craft-preview-actions">
+        <button type="button" className="secondary" onClick={onCancel}>{cancelLabel}</button>
+        {confirmLabel && onConfirm ? (
+          <button type="button" className="primary" onClick={onConfirm}>{confirmLabel}</button>
+        ) : (
+          <button type="button" className="primary" onClick={onCancel}>知道了</button>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function EquipmentPanel({
@@ -284,11 +331,14 @@ function EquipmentPanel({
   const [tab, setTab] = useState<PackTab>(discardMode ? 'all' : 'gear');
   const [assignItemId, setAssignItemId] = useState<string | null>(null);
   const [focusSlot, setFocusSlot] = useState<EquipmentSlot | null>(null);
+  const [inspectItemId, setInspectItemId] = useState<string | null>(null);
+  const [inspectMode, setInspectMode] = useState<'worn' | 'bag' | 'view'>('view');
 
   useEffect(() => {
     if (discardMode) {
       setTab('all');
       setAssignItemId(null);
+      setInspectItemId(null);
     }
   }, [discardMode]);
 
@@ -323,24 +373,60 @@ function EquipmentPanel({
     { id: 'potions', label: '丹药' }
   ];
 
+  const openInspect = (itemId: string, mode: 'worn' | 'bag' | 'view') => {
+    setInspectItemId(itemId);
+    setInspectMode(mode);
+    setAssignItemId(null);
+  };
+
+  const closeInspect = () => setInspectItemId(null);
+
   const onBagItem = (itemId: string) => {
     if (fieldMode && discardMode) {
       dispatch({ type: 'DISCARD_BAG_ITEM', itemId });
       return;
     }
     const kind = ITEMS[itemId]?.kind;
-    if (kind === 'equipment') dispatch({ type: 'EQUIP', itemId });
+    if (kind === 'equipment') openInspect(itemId, 'bag');
     else if (kind === 'potion') setAssignItemId(itemId);
+    else if (kind === 'material') openInspect(itemId, 'view');
   };
+
+  const inspectWornSlot = inspectItemId && inspectMode === 'worn'
+    ? (Object.keys(state.player.equipment) as EquipmentSlot[]).find((slot) => state.player.equipment[slot] === inspectItemId) ?? null
+    : null;
 
   return (
     <Modal title={fieldMode ? '行囊与装配' : '装配与行囊'} onClose={onClose}>
-      {fieldMode && (
+      {inspectItemId && (
+        <ItemInspectSheet
+          itemId={inspectItemId}
+          badge={inspectMode === 'worn' ? '已装备' : undefined}
+          cancelLabel={inspectMode === 'bag' ? '取消' : '关闭'}
+          confirmLabel={inspectMode === 'bag' ? '装备' : inspectMode === 'worn' ? '更换' : undefined}
+          onCancel={closeInspect}
+          onConfirm={
+            inspectMode === 'bag'
+              ? () => {
+                dispatch({ type: 'EQUIP', itemId: inspectItemId });
+                closeInspect();
+              }
+              : inspectMode === 'worn'
+                ? () => {
+                  if (inspectWornSlot) setFocusSlot(inspectWornSlot);
+                  setTab('gear');
+                  closeInspect();
+                }
+                : undefined
+          }
+        />
+      )}
+      {fieldMode && !inspectItemId && (
         <>
           <p className="modal-intro">
             {discardMode
               ? '丢弃模式：点哪个物品就丢弃哪个（整组）。点下方可关闭。'
-              : '探索中可换装、换秘术、补丹药；仅身上行囊可用，洞府仓库需回府再开。'}
+              : '探索中可换装、换秘术、补丹药；点已穿法宝可查看属性。'}
           </p>
           <button
             type="button"
@@ -351,6 +437,7 @@ function EquipmentPanel({
           </button>
         </>
       )}
+      {!inspectItemId && (
       <div className="pack-tabs" role="tablist" aria-label="行囊分类">
         {tabs.map((entry) => (
           <button
@@ -365,14 +452,15 @@ function EquipmentPanel({
           </button>
         ))}
       </div>
+      )}
 
-      {(tab === 'all' || tab === 'material') && (
+      {!inspectItemId && (tab === 'all' || tab === 'material') && (
         <section className={`pack-section${discardMode ? ' discard-mode' : ''}`}>
           <h3>身上 · {usedSlots(state.inventory.bag)}/{state.inventory.capacity}</h3>
           <p className="modal-intro">
             {discardMode
               ? '点物品即可丢弃。'
-              : tab === 'all' ? '点装备可直接装配；点丹药可挂到腰带槽。' : '灵材用于炼丹炼器。'}
+              : tab === 'all' ? '点装备可查看属性再穿上；点丹药可挂到腰带槽。' : '灵材用于炼丹炼器。点一下可看说明。'}
           </p>
           <ClickableStacks
             stacks={tab === 'all' ? state.inventory.bag : bagMaterials}
@@ -382,10 +470,10 @@ function EquipmentPanel({
         </section>
       )}
 
-      {tab === 'gear' && (
+      {!inspectItemId && tab === 'gear' && (
         <section className="pack-section">
           <div className="section-bar">法宝六槽</div>
-          <p className="modal-intro">{fieldMode ? '点空槽或已装备槽，下方列出行囊中可替换的法宝。' : '点空槽或已装备槽，下方列出可替换的法宝。'}</p>
+          <p className="modal-intro">点已穿法宝可看属性；点空槽筛选可装列表。</p>
           <div className="equipment-grid six">
             {EQUIP_SLOTS.map((slot) => {
               const itemId = state.player.equipment[slot];
@@ -395,11 +483,14 @@ function EquipmentPanel({
                   type="button"
                   key={slot}
                   className={`equip-slot-card ${focusSlot === slot ? 'active' : ''} ${equipped ? `quality-frame ${qualityCssClass(equipped.quality)}` : ''}`}
-                  onClick={() => setFocusSlot(slot)}
+                  onClick={() => {
+                    if (equipped && itemId) openInspect(itemId, 'worn');
+                    else setFocusSlot(slot);
+                  }}
                 >
                   <span>{SLOT_NAME[slot]}</span>
                   <b>{equipped ? equipped.name : '未装备'}</b>
-                  <small>{equipped ? `${equipped.quality ?? '凡品'} · 点击更换` : '点击装配'}</small>
+                  <small>{equipped ? `${equipped.quality ?? '凡品'} · 点看属性` : '点击装配'}</small>
                 </button>
               );
             })}
@@ -416,10 +507,10 @@ function EquipmentPanel({
                     className={`quality-frame ${qualityCssClass(item?.quality)}`}
                     onClick={() => {
                       if (fieldMode && discardMode) dispatch({ type: 'DISCARD_BAG_ITEM', itemId: stack.itemId });
-                      else dispatch({ type: 'EQUIP', itemId: stack.itemId });
+                      else openInspect(stack.itemId, 'bag');
                     }}
                   >
-                    <b>{discardMode ? '丢弃' : '装备'} {item.name} · {item.quality ?? '凡品'}</b>
+                    <b>{discardMode ? '丢弃' : '查看'} {item.name} · {item.quality ?? '凡品'}</b>
                     <small>{item.description}</small>
                   </button>
                 );
@@ -428,7 +519,7 @@ function EquipmentPanel({
         </section>
       )}
 
-      {tab === 'skills' && (
+      {!inspectItemId && tab === 'skills' && (
         <section className="pack-section">
           <div className="section-bar">秘术 · 已装配 {state.player.equippedSkills.length}/6 · 点按切换</div>
           <p className="modal-intro">野外与秘境可领悟秘术。战斗中按优先级自动施放已装配的秘术。</p>
@@ -453,7 +544,7 @@ function EquipmentPanel({
         </section>
       )}
 
-      {tab === 'passives' && (
+      {!inspectItemId && tab === 'passives' && (
         <section className="pack-section">
           <div className="section-bar">心法（只读叠层）</div>
           <p className="modal-intro">心法不用装配。打怪与秘境都可能领悟；同名叠层强化。</p>
@@ -476,7 +567,7 @@ function EquipmentPanel({
         </section>
       )}
 
-      {tab === 'potions' && (
+      {!inspectItemId && tab === 'potions' && (
         <section className="pack-section">
           <div className="section-bar">腰带丹药槽 · {unlocked}/3</div>
           <p className="modal-intro">底栏「血 / 灵 / 遁」按丹药类型显示。挂上后与背包分开，战斗用尽不会自动补。</p>
@@ -615,7 +706,7 @@ function CraftFacilityPanel({
             <b>{previewItem.name} · {previewItem.quality ?? '凡品'}</b>
             <em>产出 ×{previewOutputCount}{alchemyBonus > 0 ? `（丹缘 +${alchemyBonus}）` : ''}</em>
             <ul className="craft-stat-list">
-              {craftOutputStatLines(preview.output.itemId).map((line) => (
+              {itemStatLines(preview.output.itemId).map((line) => (
                 <li key={line}>{line}</li>
               ))}
             </ul>

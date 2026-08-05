@@ -913,6 +913,20 @@ button.player-bars.pack-hotspot .hud-label {
   background: #f8e8e2;
 }
 .bag-full-prompt .craft-preview-actions { margin-top: 8px; }
+
+.item-inspect { display: grid; gap: 12px; margin-bottom: 8px; }
+.item-inspect-card {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  text-align: left;
+  color: var(--ink);
+  background: #fffaf1;
+  border: 1px solid #aaa18f;
+  border-radius: 12px;
+}
+.item-inspect-card em { color: #8b4f39; font-style: normal; font-size: 12px; }
+.item-inspect-desc { color: #6d736e; }
 .equipment-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
 .equipment-grid div { padding: 9px; border: 1px solid #aaa18f; border-radius: 9px; background: #ebe4d6; }
 .equipment-grid span, .equipment-grid b { display: block; }
