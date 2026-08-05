@@ -20,14 +20,13 @@ const TERRAIN_COLOR: Record<Terrain, number> = {
   mountain: 0xa49b8b
 };
 
+/** 按主轴判定朝向：点同列/同行或更远格子也能往该方向走一步（与滑动一致） */
 function directionBetween(from: Position, to: Position): Direction | null {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
-  if (Math.abs(dx) + Math.abs(dy) !== 1) return null;
-  if (dx === 1) return 'right';
-  if (dx === -1) return 'left';
-  if (dy === 1) return 'down';
-  return 'up';
+  if (dx === 0 && dy === 0) return null;
+  if (Math.abs(dx) >= Math.abs(dy)) return dx > 0 ? 'right' : 'left';
+  return dy > 0 ? 'down' : 'up';
 }
 
 function entityGlyph(entity: MapEntity): string {
@@ -316,7 +315,7 @@ export function MapView({ state, dispatch }: MapViewProps) {
     };
   }, [columns, rows]);
 
-  return <div className="map-view" ref={hostRef} aria-label="探索地图：点击相邻格或滑动移动" />;
+  return <div className="map-view" ref={hostRef} aria-label="探索地图：点击方向格或滑动移动" />;
 }
 
 export default MapView;
