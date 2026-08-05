@@ -906,6 +906,13 @@ button.player-bars.pack-hotspot .hud-label {
   width: 100%;
   margin-top: 0;
 }
+
+.pack-section.discard-mode .stack-chip,
+.recipe-list.discard-mode button {
+  outline: 1px dashed #b24a3f88;
+  background: #f8e8e2;
+}
+.bag-full-prompt .craft-preview-actions { margin-top: 8px; }
 .equipment-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
 .equipment-grid div { padding: 9px; border: 1px solid #aaa18f; border-radius: 9px; background: #ebe4d6; }
 .equipment-grid span, .equipment-grid b { display: block; }

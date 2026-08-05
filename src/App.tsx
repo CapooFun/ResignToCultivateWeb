@@ -269,17 +269,29 @@ function EquipmentPanel({
   state,
   dispatch,
   onClose,
-  fieldMode = false
+  fieldMode = false,
+  discardMode = false,
+  onDiscardModeChange
 }: {
   state: GameState;
   dispatch: (command: GameCommand) => void;
   onClose: () => void;
   /** 探索非战斗：只动用身上行囊，不访问仓库 */
   fieldMode?: boolean;
+  discardMode?: boolean;
+  onDiscardModeChange?: (next: boolean) => void;
 }) {
-  const [tab, setTab] = useState<PackTab>('gear');
+  const [tab, setTab] = useState<PackTab>(discardMode ? 'all' : 'gear');
   const [assignItemId, setAssignItemId] = useState<string | null>(null);
   const [focusSlot, setFocusSlot] = useState<EquipmentSlot | null>(null);
+
+  useEffect(() => {
+    if (discardMode) {
+      setTab('all');
+      setAssignItemId(null);
+    }
+  }, [discardMode]);
+
   const unlocked = unlockedPotionSlots(state);
   const bagMaterials = state.inventory.bag.filter((stack) => ITEMS[stack.itemId]?.kind === 'material');
   const bagPotions = state.inventory.bag.filter((stack) => ITEMS[stack.itemId]?.kind === 'potion');
@@ -312,6 +324,10 @@ function EquipmentPanel({
   ];
 
   const onBagItem = (itemId: string) => {
+    if (fieldMode && discardMode) {
+      dispatch({ type: 'DISCARD_BAG_ITEM', itemId });
+      return;
+    }
     const kind = ITEMS[itemId]?.kind;
     if (kind === 'equipment') dispatch({ type: 'EQUIP', itemId });
     else if (kind === 'potion') setAssignItemId(itemId);
@@ -320,7 +336,20 @@ function EquipmentPanel({
   return (
     <Modal title={fieldMode ? '行囊与装配' : '装配与行囊'} onClose={onClose}>
       {fieldMode && (
-        <p className="modal-intro">探索中可换装、换秘术、补丹药；仅身上行囊可用，洞府仓库需回府再开。</p>
+        <>
+          <p className="modal-intro">
+            {discardMode
+              ? '丢弃模式：点哪个物品就丢弃哪个（整组）。点下方可关闭。'
+              : '探索中可换装、换秘术、补丹药；仅身上行囊可用，洞府仓库需回府再开。'}
+          </p>
+          <button
+            type="button"
+            className={discardMode ? 'danger wide' : 'secondary wide'}
+            onClick={() => onDiscardModeChange?.(!discardMode)}
+          >
+            {discardMode ? '关闭丢弃' : '启用丢弃'}
+          </button>
+        </>
       )}
       <div className="pack-tabs" role="tablist" aria-label="行囊分类">
         {tabs.map((entry) => (
@@ -338,9 +367,13 @@ function EquipmentPanel({
       </div>
 
       {(tab === 'all' || tab === 'material') && (
-        <section className="pack-section">
+        <section className={`pack-section${discardMode ? ' discard-mode' : ''}`}>
           <h3>身上 · {usedSlots(state.inventory.bag)}/{state.inventory.capacity}</h3>
-          <p className="modal-intro">{tab === 'all' ? '点装备可直接装配；点丹药可挂到腰带槽。' : '灵材用于炼丹炼器。'}</p>
+          <p className="modal-intro">
+            {discardMode
+              ? '点物品即可丢弃。'
+              : tab === 'all' ? '点装备可直接装配；点丹药可挂到腰带槽。' : '灵材用于炼丹炼器。'}
+          </p>
           <ClickableStacks
             stacks={tab === 'all' ? state.inventory.bag : bagMaterials}
             onSelect={onBagItem}
@@ -372,7 +405,7 @@ function EquipmentPanel({
             })}
           </div>
           <div className="section-bar">{focusSlot ? `${SLOT_NAME[focusSlot]}可装` : '全部可装法宝'} · {gearForFocus.length}</div>
-          <div className="recipe-list compact">
+          <div className={`recipe-list compact${discardMode ? ' discard-mode' : ''}`}>
             {gearForFocus.length === 0
               ? <p className="empty-note">{fieldMode ? '行囊中暂无对应法宝。' : '暂无对应法宝，可去炼器或秘境寻找。'}</p>
               : gearForFocus.map((stack) => {
@@ -381,9 +414,12 @@ function EquipmentPanel({
                   <button
                     key={stack.itemId}
                     className={`quality-frame ${qualityCssClass(item?.quality)}`}
-                    onClick={() => dispatch({ type: 'EQUIP', itemId: stack.itemId })}
+                    onClick={() => {
+                      if (fieldMode && discardMode) dispatch({ type: 'DISCARD_BAG_ITEM', itemId: stack.itemId });
+                      else dispatch({ type: 'EQUIP', itemId: stack.itemId });
+                    }}
                   >
-                    <b>装备 {item.name} · {item.quality ?? '凡品'}</b>
+                    <b>{discardMode ? '丢弃' : '装备'} {item.name} · {item.quality ?? '凡品'}</b>
                     <small>{item.description}</small>
                   </button>
                 );
@@ -476,7 +512,10 @@ function EquipmentPanel({
                   )}
                   <ClickableStacks
                     stacks={owned}
-                    onSelect={(itemId) => setAssignItemId(itemId)}
+                    onSelect={(itemId) => {
+                      if (fieldMode && discardMode) dispatch({ type: 'DISCARD_BAG_ITEM', itemId });
+                      else setAssignItemId(itemId);
+                    }}
                     emptyText={`背包暂无${group.glyph}类丹药`}
                   />
                 </div>
@@ -836,10 +875,29 @@ function ExploreView({ state, dispatch }: { state: GameState; dispatch: (command
   const pending = floor.entities.find((entity) => entity.id === run.pendingInteractionId);
   const enemyName = state.combat ? enemyDisplayName(state.combat.enemyId, state.combat.enemyRank) : null;
   const [packOpen, setPackOpen] = useState(false);
+  const [discardMode, setDiscardMode] = useState(false);
 
   useEffect(() => {
-    if (state.combat) setPackOpen(false);
+    if (state.combat) {
+      setPackOpen(false);
+      setDiscardMode(false);
+    }
   }, [state.combat]);
+
+  const closePack = () => {
+    setPackOpen(false);
+    setDiscardMode(false);
+  };
+
+  const acceptDiscardPrompt = () => {
+    dispatch({ type: 'CLEAR_BAG_FULL_PROMPT' });
+    setDiscardMode(true);
+    setPackOpen(true);
+  };
+
+  const dismissDiscardPrompt = () => {
+    dispatch({ type: 'CLEAR_BAG_FULL_PROMPT' });
+  };
 
   return (
     <main className="screen explore-screen">
@@ -851,12 +909,26 @@ function ExploreView({ state, dispatch }: { state: GameState; dispatch: (command
       <div className="map-legend"><span>点方向格或滑动一步</span><span>种子 {run.seed}</span></div>
       {pending && <div className="interaction-card"><b>{pending.kind === 'return' ? '回府传送阵' : '传送门'}</b><button onClick={() => dispatch({ type: pending.kind === 'return' ? 'RETURN_CAVE' : 'ADVANCE_FLOOR' })}>{pending.kind === 'return' ? '结束本趟并回府' : '进入下一层'}</button></div>}
       <CombatHud state={state} dispatch={dispatch} onOpenPack={() => setPackOpen(true)} />
+      {state.bagFullPrompt && !state.combat && (
+        <div className="modal-backdrop" role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) dismissDiscardPrompt(); }}>
+          <section className="modal bag-full-prompt" role="dialog" aria-modal="true" aria-label="行囊已满">
+            <header><h2>行囊已满</h2><button className="icon-button" onClick={dismissDiscardPrompt} aria-label="关闭">×</button></header>
+            <p className="modal-intro">地上的东西还在。可以丢弃行囊里暂时不需要的物品，腾出空位后再拾取。</p>
+            <div className="craft-preview-actions">
+              <button type="button" className="secondary" onClick={dismissDiscardPrompt}>取消</button>
+              <button type="button" className="primary" onClick={acceptDiscardPrompt}>去丢弃</button>
+            </div>
+          </section>
+        </div>
+      )}
       {packOpen && !state.combat && (
         <EquipmentPanel
           state={state}
           dispatch={dispatch}
-          onClose={() => setPackOpen(false)}
+          onClose={closePack}
           fieldMode
+          discardMode={discardMode}
+          onDiscardModeChange={setDiscardMode}
         />
       )}
     </main>

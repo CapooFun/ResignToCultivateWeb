@@ -298,6 +298,40 @@ describe('游戏核心', () => {
     expect(state.meta.message).toMatch(/已关/);
   });
 
+  it('探索中可丢弃行囊物品腾出空位', () => {
+    let state = startRun();
+    state.inventory.capacity = 2;
+    state.inventory.bag = [
+      { itemId: 'spirit_herb', count: 1 },
+      { itemId: 'iron_ore', count: 1 }
+    ];
+    state = dispatchGameCommand(state, { type: 'DISCARD_BAG_ITEM', itemId: 'spirit_herb' }).state;
+    expect(state.inventory.bag.some((stack) => stack.itemId === 'spirit_herb')).toBe(false);
+    expect(state.inventory.bag).toHaveLength(1);
+    expect(state.meta.message).toMatch(/已丢弃/);
+  });
+
+  it('行囊满拾取会提示丢弃', () => {
+    let state = startRun();
+    state.inventory.capacity = 1;
+    state.inventory.bag = [{ itemId: 'spirit_herb', count: 1 }];
+    const floor = currentFloor(state.run!);
+    const resource = floor.entities.find((entity) => entity.kind === 'resource' && entity.itemId)!;
+    const resourceId = resource.id;
+    floor.tiles[resource.position.y][resource.position.x].terrain = 'plain';
+    const adjacent = { x: resource.position.x - 1, y: resource.position.y };
+    floor.tiles[adjacent.y][adjacent.x].terrain = 'plain';
+    for (const entity of floor.entities) {
+      if (entity !== resource && entity.position.x === adjacent.x && entity.position.y === adjacent.y) entity.cleared = true;
+      if (entity !== resource && entity.position.x === resource.position.x && entity.position.y === resource.position.y) entity.cleared = true;
+    }
+    state.run!.playerPosition = adjacent;
+    state = dispatchGameCommand(state, { type: 'MOVE', direction: 'right' }).state;
+    expect(state.bagFullPrompt).toBe(true);
+    const after = currentFloor(state.run!).entities.find((entity) => entity.id === resourceId);
+    expect(after?.cleared).toBeFalsy();
+  });
+
   it('寿元耗尽进入轮回，仓库与设施保留、身上清空', () => {
     let state = startRun();
     const warehouseBefore = structuredClone(state.inventory.warehouse);

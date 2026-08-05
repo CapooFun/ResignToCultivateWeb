@@ -310,6 +310,8 @@ export interface GameState {
   popup: GamePopup | null;
   /** 风灵月影开启前的完整快照；再点一次恢复。不嵌套自身。 */
   cheatRestore: GameState | null;
+  /** 探索中行囊已满，提示是否打开丢弃。 */
+  bagFullPrompt: boolean;
 }
 
 export interface SaveEnvelope {
@@ -346,6 +348,8 @@ export type GameCommand =
   | { type: 'BUY_TALENT'; talentId: string }
   | { type: 'REINCARNATE' }
   | { type: 'APPLY_CHEAT' }
+  | { type: 'DISCARD_BAG_ITEM'; itemId: string }
+  | { type: 'CLEAR_BAG_FULL_PROMPT' }
   | { type: 'RESET_GAME' }
   | { type: 'SET_MESSAGE'; message: string }
   | { type: 'DISMISS_POPUP' };

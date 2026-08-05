@@ -193,7 +193,8 @@ export function createInitialState(buildVersion = 'local-dev', seed = 20260804):
     combat: null,
     reincarnation,
     popup: null,
-    cheatRestore: null
+    cheatRestore: null,
+    bagFullPrompt: false
   };
 }
 
@@ -309,13 +310,9 @@ function positionEquals(a: Position, b: Position): boolean {
   return a.x === b.x && a.y === b.y;
 }
 
-/** TEMP 热修：朋友试用期间背包容量翻倍，用完删掉此倍率。 */
-const TEMP_BAG_CAPACITY_MULTIPLIER = 2;
-
 function inventoryCapacityWithGear(state: GameState): number {
   const ringId = state.player.equipment.ring;
-  const base = baseBagCapacity(state.reincarnation) + (ringId ? ITEMS[ringId]?.bagSlots ?? 0 : 0);
-  return base * TEMP_BAG_CAPACITY_MULTIPLIER;
+  return baseBagCapacity(state.reincarnation) + (ringId ? ITEMS[ringId]?.bagSlots ?? 0 : 0);
 }
 
 function returnOverflowPotionSlots(state: GameState): void {
@@ -758,7 +755,10 @@ function addLoot(state: GameState, stacks: ItemStack[], dropAt?: Position): void
     if (result.added < count) leftovers.push({ itemId: stack.itemId, count: count - result.added });
   }
   if (leftovers.length === 0 || !state.run || !dropAt) {
-    if (leftovers.length > 0) message(state, '背包已满，部分战利品遗落。');
+    if (leftovers.length > 0) {
+      message(state, '背包已满，部分战利品遗落。');
+      offerBagFullDiscard(state);
+    }
     return;
   }
   const floor = currentFloor(state.run);
@@ -781,6 +781,7 @@ function addLoot(state: GameState, stacks: ItemStack[], dropAt?: Position): void
       count: leftover.count
     });
   }
+  offerBagFullDiscard(state);
 }
 
 function pickupResourcesAt(state: GameState, position: Position): string[] {
@@ -790,6 +791,7 @@ function pickupResourcesAt(state: GameState, position: Position): string[] {
     !entity.cleared && entity.kind === 'resource' && entity.itemId && positionEquals(entity.position, position)
   ));
   const lines: string[] = [];
+  let blocked = false;
   for (const entity of resources) {
     const want = entity.count ?? 1;
     const result = addItem(state.inventory.bag, state.inventory.capacity, entity.itemId!, want);
@@ -801,13 +803,41 @@ function pickupResourcesAt(state: GameState, position: Position): string[] {
     } else if (result.added > 0) {
       entity.count = want - result.added;
       lines.push(`背包将满，只装下 ${name} ×${result.added}`);
-      message(state, '背包空间不足。');
+      blocked = true;
+      break;
     } else {
-      message(state, '背包已满，资源仍留在原地。');
+      blocked = true;
       break;
     }
   }
+  if (blocked) offerBagFullDiscard(state);
   return lines;
+}
+
+function offerBagFullDiscard(state: GameState): void {
+  if (state.scene !== 'explore') return;
+  state.bagFullPrompt = true;
+  message(state, '行囊已满。可丢弃物品腾出空位后再拾取。');
+}
+
+function discardBagItem(state: GameState, itemId: string): void {
+  if (state.scene !== 'explore') {
+    message(state, '仅探索中可丢弃行囊物品。');
+    return;
+  }
+  if (state.combat) {
+    message(state, '战斗中不可丢弃。');
+    return;
+  }
+  const have = itemCount(state.inventory.bag, itemId);
+  if (have <= 0) {
+    message(state, '行囊中没有这件物品。');
+    return;
+  }
+  state.inventory.bag = removeItem(state.inventory.bag, itemId, have).stacks;
+  const name = ITEMS[itemId]?.name ?? itemId;
+  message(state, `已丢弃 ${name} ×${have}。`);
+  state.bagFullPrompt = false;
 }
 
 function awardExperience(state: GameState, amount: number): string | null {
@@ -968,7 +998,7 @@ function interactAfterMove(state: GameState, entity: MapEntity | undefined): voi
         if (item?.description) lines.push(item.description);
       } else {
         lines.push(`背包已满，${item?.name ?? '奖励'}暂未领取`);
-        message(state, '背包已满，秘境奖励暂未领取。');
+        offerBagFullDiscard(state);
       }
     }
   } else if (focus.kind === 'return' || focus.kind === 'depth') {
@@ -1288,6 +1318,7 @@ function applyCheat(state: GameState): void {
   state.run = null;
   state.combat = null;
   state.popup = null;
+  state.bagFullPrompt = false;
   state.player.realmLevel = 5;
   state.player.realm = '化神';
   state.player.peakRealmLevel = 5;
@@ -1418,6 +1449,7 @@ export function migrateGameState(raw: unknown): GameState {
   else player.realm = '炼气';
   if (!('popup' in state) || state.popup === undefined) state.popup = null;
   if (!('cheatRestore' in state) || state.cheatRestore === undefined) state.cheatRestore = null;
+  if (!('bagFullPrompt' in state) || state.bagFullPrompt === undefined) state.bagFullPrompt = false;
   ensureMineFields(state);
   if (state.run?.floors) {
     for (const floor of state.run.floors) {
@@ -1499,6 +1531,8 @@ export function dispatchGameCommand(input: GameState, command: GameCommand): Dis
       applyCheat(state);
       break;
     }
+    case 'DISCARD_BAG_ITEM': discardBagItem(state, command.itemId); break;
+    case 'CLEAR_BAG_FULL_PROMPT': state.bagFullPrompt = false; break;
     case 'RESET_GAME': return { state: createInitialState(input.meta.buildVersion, input.meta.diagnosticSeed), shouldSave: true };
     case 'SET_MESSAGE': message(state, command.message); break;
     case 'DISMISS_POPUP':

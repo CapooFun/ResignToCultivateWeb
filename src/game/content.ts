@@ -551,67 +551,67 @@ export const ITEMS: Record<string, ItemDefinition> = {
     id: 'ring_1',
     name: '纳物戒',
     kind: 'equipment',
-    description: '物攻 +2，格子 +2。',
+    description: '物攻 +2，格子 +4。',
     maxStack: 1,
     quality: '凡品',
     equipmentSlot: 'ring',
     physicalAttack: 2,
-    bagSlots: 2
+    bagSlots: 4
   },
   ring_2: {
     id: 'ring_2',
     name: '破军戒',
     kind: 'equipment',
-    description: '物攻 +5，格子 +3。',
+    description: '物攻 +5，格子 +6。',
     maxStack: 1,
     quality: '灵器',
     equipmentSlot: 'ring',
     physicalAttack: 5,
-    bagSlots: 3
+    bagSlots: 6
   },
   ring_3: {
     id: 'ring_3',
     name: '聚灵戒',
     kind: 'equipment',
-    description: '物攻 +8，格子 +4。',
+    description: '物攻 +8，格子 +8。',
     maxStack: 1,
     quality: '灵宝',
     equipmentSlot: 'ring',
     physicalAttack: 8,
-    bagSlots: 4
+    bagSlots: 8
   },
   ring_4: {
     id: 'ring_4',
     name: '镇岳戒',
     kind: 'equipment',
-    description: '物攻 +11，格子 +5。',
+    description: '物攻 +11，格子 +10。',
     maxStack: 1,
     quality: '玄天灵宝',
     equipmentSlot: 'ring',
     physicalAttack: 11,
-    bagSlots: 5
+    bagSlots: 10
   },
   ring_5: {
     id: 'ring_5',
     name: '天道戒',
     kind: 'equipment',
-    description: '物攻 +14，格子 +6。',
+    description: '物攻 +14，格子 +12。',
     maxStack: 1,
     quality: '通天灵宝',
     equipmentSlot: 'ring',
     physicalAttack: 14,
-    bagSlots: 6
+    bagSlots: 12
   },
   ring_6: {
     id: 'ring_6',
     name: '仙府戒',
     kind: 'equipment',
-    description: '物攻 +17，格子 +7。',
+    description: '物攻 +17，格子 +14。',
     maxStack: 1,
     quality: '？？？',
     equipmentSlot: 'ring',
     physicalAttack: 17,
-    bagSlots: 7
+    bagSlots: 14
   },
   shoes_1: {
     id: 'shoes_1',
@@ -859,23 +859,23 @@ export const ITEMS: Record<string, ItemDefinition> = {
     id: 'storage_ring',
     name: '纳物戒',
     kind: 'equipment',
-    description: '物攻 +2，格子 +2。',
+    description: '物攻 +2，格子 +4。',
     maxStack: 1,
     quality: '凡品',
     equipmentSlot: 'ring',
     physicalAttack: 2,
-    bagSlots: 2
+    bagSlots: 4
   },
   attack_ring: {
     id: 'attack_ring',
     name: '破军戒',
     kind: 'equipment',
-    description: '物攻 +5，格子 +3。',
+    description: '物攻 +5，格子 +6。',
     maxStack: 1,
     quality: '灵器',
     equipmentSlot: 'ring',
     physicalAttack: 5,
-    bagSlots: 3
+    bagSlots: 6
   },
   cloud_shoes: {
     id: 'cloud_shoes',
